@@ -10,7 +10,6 @@ import (
 type SimpleVote struct {
 	Id     string             `bson:"_id,omitempty"`
 	PollId primitive.ObjectID `bson:"pollId"`
-	UserId string             `bson:"userId"`
 	Option string             `bson:"option"`
 }
 

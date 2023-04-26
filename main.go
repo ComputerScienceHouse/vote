@@ -234,7 +234,6 @@ func main() {
 			vote := database.SimpleVote{
 				Id:     "",
 				PollId: pId,
-				UserId: claims.UserInfo.Username,
 				Option: c.PostForm("option"),
 			}
 
@@ -251,7 +250,6 @@ func main() {
 			vote := database.RankedVote{
 				Id:      "",
 				PollId:  pId,
-				UserId:  claims.UserInfo.Username,
 				Options: make(map[string]int),
 			}
 			for _, opt := range poll.Options {
@@ -279,6 +277,12 @@ func main() {
 			c.JSON(500, gin.H{"error": "Unknown Poll Type"})
 			return
 		}
+
+		database.RecordVoter(&database.Voter{
+			Id:	"",
+			PollId:	pId,
+			UserId:	claims.UserInfo.Username,
+		})
 
 		if poll, err := database.GetPoll(c.Param("id")); err == nil {
 			if results, err := poll.GetResult(); err == nil {

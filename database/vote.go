@@ -16,7 +16,7 @@ func HasVoted(pollId, userId string) (bool, error) {
 		return false, err
 	}
 
-	count, err := Client.Database("vote").Collection("votes").CountDocuments(ctx, map[string]interface{}{"pollId": pId, "userId": userId})
+	count, err := Client.Database("vote").Collection("voters").CountDocuments(ctx, map[string]interface{}{"pollId": pId, "userId": userId})
 	if err != nil {
 		return false, err
 	}
