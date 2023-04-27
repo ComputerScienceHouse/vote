@@ -280,7 +280,7 @@ func main() {
 
 		database.RecordVoter(&database.Voter{
 			Id:	"",
-			PollId:	pId,
+			PollId:	poll.Id,
 			UserId:	claims.UserInfo.Username,
 		})
 
