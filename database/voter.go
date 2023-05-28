@@ -11,8 +11,8 @@ type Voter struct {
 	UserId string   `bson:"userId"`
 }
 
-func RecordVoter(voter *Voter) error {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func RecordVoter(ctx context.Context, voter *Voter) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	if voter.Id == "" {

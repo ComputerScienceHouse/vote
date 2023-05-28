@@ -171,7 +171,7 @@ func main() {
 			return
 		}
 
-		hasVoted, err := database.HasVoted(poll.Id, claims.UserInfo.Username)
+		hasVoted, err := database.HasVoted(c, poll.Id, claims.UserInfo.Username)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -214,7 +214,7 @@ func main() {
 			return
 		}
 
-		hasVoted, err := database.HasVoted(poll.Id, claims.UserInfo.Username)
+		hasVoted, err := database.HasVoted(c, poll.Id, claims.UserInfo.Username)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -245,7 +245,7 @@ func main() {
 				c.JSON(400, gin.H{"error": "Invalid Option"})
 				return
 			}
-			database.CastSimpleVote(&vote)
+			database.CastSimpleVote(c, &vote)
 		} else if poll.VoteType == database.POLL_TYPE_RANKED {
 			vote := database.RankedVote{
 				Id:      "",
@@ -272,13 +272,13 @@ func main() {
 					vote.Options[c.PostForm("writeinOption")] = rank
 				}
 			}
-			database.CastRankedVote(&vote)
+			database.CastRankedVote(c, &vote)
 		} else {
 			c.JSON(500, gin.H{"error": "Unknown Poll Type"})
 			return
 		}
 
-		database.RecordVoter(&database.Voter{
+		database.RecordVoter(c, &database.Voter{
 			Id:	"",
 			PollId:	poll.Id,
 			UserId:	claims.UserInfo.Username,
