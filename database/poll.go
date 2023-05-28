@@ -25,8 +25,8 @@ type Poll struct {
 const POLL_TYPE_SIMPLE = "simple"
 const POLL_TYPE_RANKED = "ranked"
 
-func GetPoll(id string) (*Poll, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func GetPoll(ctx context.Context, id string) (*Poll, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	objId, _ := primitive.ObjectIDFromHex(id)
@@ -38,8 +38,8 @@ func GetPoll(id string) (*Poll, error) {
 	return &poll, nil
 }
 
-func (poll *Poll) Close() error {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func (poll *Poll) Close(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	objId, _ := primitive.ObjectIDFromHex(poll.Id)
@@ -52,8 +52,8 @@ func (poll *Poll) Close() error {
 	return nil
 }
 
-func (poll *Poll) Hide() error {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func (poll *Poll) Hide(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	objId, _ := primitive.ObjectIDFromHex(poll.Id)
@@ -66,8 +66,8 @@ func (poll *Poll) Hide() error {
 	return nil
 }
 
-func (poll *Poll) Reveal() error {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func (poll *Poll) Reveal(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	objId, _ := primitive.ObjectIDFromHex(poll.Id)
@@ -80,8 +80,8 @@ func (poll *Poll) Reveal() error {
 	return nil
 }
 
-func CreatePoll(poll *Poll) (string, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func CreatePoll(ctx context.Context, poll *Poll) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	result, err := Client.Database("vote").Collection("polls").InsertOne(ctx, poll)
@@ -92,8 +92,8 @@ func CreatePoll(poll *Poll) (string, error) {
 	return result.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func GetOpenPolls() ([]*Poll, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func GetOpenPolls(ctx context.Context) ([]*Poll, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	cursor, err := Client.Database("vote").Collection("polls").Find(ctx, map[string]interface{}{"open": true})
@@ -108,8 +108,8 @@ func GetOpenPolls() ([]*Poll, error) {
 	return polls, nil
 }
 
-func GetClosedOwnedPolls(userId string) ([]*Poll, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func GetClosedOwnedPolls(ctx context.Context, userId string) ([]*Poll, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	cursor, err := Client.Database("vote").Collection("polls").Find(ctx, map[string]interface{}{"createdBy": userId, "open": false})
@@ -123,8 +123,8 @@ func GetClosedOwnedPolls(userId string) ([]*Poll, error) {
 	return polls, nil
 }
 
-func GetClosedVotedPolls(userId string) ([]*Poll, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	cursor, err := Client.Database("vote").Collection("votes").Aggregate(ctx, mongo.Pipeline{
@@ -168,8 +168,8 @@ func GetClosedVotedPolls(userId string) ([]*Poll, error) {
 	return polls, nil
 }
 
-func (poll *Poll) GetResult() (map[string]int, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func (poll *Poll) GetResult(ctx context.Context) (map[string]int, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	pollId, _ := primitive.ObjectIDFromHex(poll.Id)
