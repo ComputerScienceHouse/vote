@@ -20,6 +20,7 @@ const (
 )
 
 var Client = Connect()
+var db = os.Getenv("VOTE_MONGO_DB")
 
 func Connect() *mongo.Client {
 	logging.Logger.WithFields(logrus.Fields{"module": "database", "method": "Connect"}).Info("beginning database connection")

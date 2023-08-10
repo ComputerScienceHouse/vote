@@ -17,7 +17,7 @@ func CastRankedVote(ctx context.Context, vote *RankedVote) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	_, err := Client.Database("vote").Collection("votes").InsertOne(ctx, vote)
+	_, err := Client.Database(db).Collection("votes").InsertOne(ctx, vote)
 	if err != nil {
 		return err
 	}
