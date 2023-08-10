@@ -45,7 +45,7 @@ func main() {
 		// This is intentionally left unprotected
 		// A user may be unable to vote but should still be able to see a list of polls
 
-		polls, err := database.GetOpenPolls()
+		polls, err := database.GetOpenPolls(c)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -54,12 +54,12 @@ func main() {
 			return polls[i].Id > polls[j].Id
 		})
 
-		closedPolls, err := database.GetClosedVotedPolls(claims.UserInfo.Username)
+		closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		ownedPolls, err := database.GetClosedOwnedPolls(claims.UserInfo.Username)
+		ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -139,7 +139,7 @@ func main() {
 			poll.Options = []string{"Pass", "Fail", "Abstain"}
 		}
 
-		pollId, err := database.CreatePoll(poll)
+		pollId, err := database.CreatePoll(c, poll)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -154,7 +154,7 @@ func main() {
 		// This is intentionally left unprotected
 		// We will check if a user can vote and redirect them to results if not later
 
-		poll, err := database.GetPoll(c.Param("id"))
+		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -171,7 +171,7 @@ func main() {
 			return
 		}
 
-		hasVoted, err := database.HasVoted(poll.Id, claims.UserInfo.Username)
+		hasVoted, err := database.HasVoted(c, poll.Id, claims.UserInfo.Username)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -208,13 +208,13 @@ func main() {
 			return
 		}
 
-		poll, err := database.GetPoll(c.Param("id"))
+		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
 
-		hasVoted, err := database.HasVoted(poll.Id, claims.UserInfo.Username)
+		hasVoted, err := database.HasVoted(c, poll.Id, claims.UserInfo.Username)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -234,7 +234,6 @@ func main() {
 			vote := database.SimpleVote{
 				Id:     "",
 				PollId: pId,
-				UserId: claims.UserInfo.Username,
 				Option: c.PostForm("option"),
 			}
 
@@ -246,12 +245,11 @@ func main() {
 				c.JSON(400, gin.H{"error": "Invalid Option"})
 				return
 			}
-			database.CastSimpleVote(&vote)
+			database.CastSimpleVote(c, &vote)
 		} else if poll.VoteType == database.POLL_TYPE_RANKED {
 			vote := database.RankedVote{
 				Id:      "",
 				PollId:  pId,
-				UserId:  claims.UserInfo.Username,
 				Options: make(map[string]int),
 			}
 			for _, opt := range poll.Options {
@@ -274,14 +272,20 @@ func main() {
 					vote.Options[c.PostForm("writeinOption")] = rank
 				}
 			}
-			database.CastRankedVote(&vote)
+			database.CastRankedVote(c, &vote)
 		} else {
 			c.JSON(500, gin.H{"error": "Unknown Poll Type"})
 			return
 		}
 
-		if poll, err := database.GetPoll(c.Param("id")); err == nil {
-			if results, err := poll.GetResult(); err == nil {
+		database.RecordVoter(c, &database.Voter{
+			Id:	"",
+			PollId:	poll.Id,
+			UserId:	claims.UserInfo.Username,
+		})
+
+		if poll, err := database.GetPoll(c, c.Param("id")); err == nil {
+			if results, err := poll.GetResult(c); err == nil {
 				if bytes, err := json.Marshal(results); err == nil {
 					broker.Notifier <- sse.NotificationEvent{
 						EventName: poll.Id,
@@ -301,7 +305,7 @@ func main() {
 		// This is intentionally left unprotected
 		// A user may be unable to vote but still interested in the results of a poll
 
-		poll, err := database.GetPoll(c.Param("id"))
+		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -312,7 +316,7 @@ func main() {
             return
         }
 
-		results, err := poll.GetResult()
+		results, err := poll.GetResult(c)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -335,7 +339,7 @@ func main() {
         cl, _ := c.Get("cshauth")
         claims := cl.(csh_auth.CSHClaims)
 
-        poll, err := database.GetPoll(c.Param("id"))
+        poll, err := database.GetPoll(c, c.Param("id"))
 
         if err != nil {
             c.JSON(500, gin.H{"error": err.Error()})
@@ -347,7 +351,7 @@ func main() {
             return
         }
 
-        err = poll.Hide()
+        err = poll.Hide(c)
         if err != nil {
             c.JSON(500, gin.H{"error": err.Error()})
             return
@@ -361,7 +365,7 @@ func main() {
         cl, _ := c.Get("cshauth")
         claims := cl.(csh_auth.CSHClaims)
 
-        poll, err := database.GetPoll(c.Param("id"))
+        poll, err := database.GetPoll(c, c.Param("id"))
 
         if err != nil {
             c.JSON(500, gin.H{"error": err.Error()})
@@ -373,7 +377,7 @@ func main() {
             return
         }
 
-        err = poll.Reveal()
+        err = poll.Reveal(c)
         if err != nil {
             c.JSON(500, gin.H{"error": err.Error()})
             return
@@ -388,7 +392,7 @@ func main() {
 		// This is intentionally left unprotected
 		// A user should be able to close their own polls, regardless of if they can vote
 
-		poll, err := database.GetPoll(c.Param("id"))
+		poll, err := database.GetPoll(c, c.Param("id"))
 
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -400,7 +404,7 @@ func main() {
 			return
 		}
 
-		err = poll.Close()
+		err = poll.Close(c)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
