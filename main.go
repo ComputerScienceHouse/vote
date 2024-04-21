@@ -330,6 +330,7 @@ func main() {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
+		canModify := containsString(claims.UserInfo.Groups, "active-rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
 		c.HTML(200, "result.tmpl", gin.H{
 			"Id":               poll.Id,
@@ -339,7 +340,7 @@ func main() {
 			"Results":          results,
 			"IsOpen":           poll.Open,
 			"IsHidden":         poll.Hidden,
-			"IsOwner":          poll.CreatedBy == claims.UserInfo.Username,
+			"CanModify":        canModify,
 			"Username":         claims.UserInfo.Username,
 			"FullName":         claims.UserInfo.FullName,
 		})

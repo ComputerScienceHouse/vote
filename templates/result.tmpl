@@ -46,21 +46,21 @@
           {{ end }}
         {{ end }}
       </div>
-      {{ if and (.IsOwner) (.IsHidden) }}
+      {{ if and (.CanModify) (.IsHidden) }}
       <br />
       <br />
       <form action="/poll/{{ .Id }}/reveal" method="POST">
         <button type="submit" class="btn btn-success">Reveal Votes</button>
       </form>
       {{ end }}
-      {{ if and (.IsOwner) (not .IsHidden) }}
+      {{ if and (.CanModify) (not .IsHidden) }}
       <br />
       <br />
       <form action="/poll/{{ .Id }}/hide" method="POST">
         <button type="submit" class="btn btn-danger">Hide Votes</button>
       </form>
       {{ end }}
-      {{ if and (.IsOwner) (.IsOpen) }}
+      {{ if and (.CanModify) (.IsOpen) }}
       <br />
       <br />
       <form action="/poll/{{ .Id }}/close" method="POST">
