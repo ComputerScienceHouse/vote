@@ -330,8 +330,8 @@ func main() {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
 		}
-		fmt.Println(claims.UserInfo.Groups)
-		canModify := containsString(claims.UserInfo.Groups, "active-rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
+		
+		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
 		c.HTML(200, "result.tmpl", gin.H{
 			"Id":               poll.Id,
