@@ -3,7 +3,6 @@ package database
 import (
 	"context"
 	"time"
-	"fmt"
 
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -19,9 +18,7 @@ func HasVoted(ctx context.Context, pollId, userId string) (bool, error) {
 
 	count, err := Client.Database(db).Collection("votes").CountDocuments(ctx, map[string]interface{}{"pollId": pId, "userId": userId})
 	if err != nil {
-		fmt.Println(err)
 		return false, err
 	}
-	fmt.Println(count)
 	return count > 0, nil
 }
