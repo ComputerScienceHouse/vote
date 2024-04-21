@@ -21,7 +21,7 @@ func CastRankedVote(ctx context.Context, vote *RankedVote, voter *Voter) error {
 	if err != nil {
 		return err
 	}
-	_, err = Client.Database(db).Collection("voters").InsertOne(ctx, vote)
+	_, err = Client.Database(db).Collection("voters").InsertOne(ctx, voter)
 	if err != nil {
 		return err
 	}
