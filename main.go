@@ -18,7 +18,7 @@ import (
 )
 
 func inc(x int) string {
-	return strconv.Itoa(x + 1)
+    return strconv.Itoa(x+1)
 }
 
 func main() {
