@@ -10,7 +10,6 @@ import (
 type SimpleVote struct {
 	Id     string             `bson:"_id,omitempty"`
 	PollId primitive.ObjectID `bson:"pollId"`
-	UserId string             `bson:"userId"`
 	Option string             `bson:"option"`
 }
 
@@ -19,11 +18,15 @@ type SimpleResult struct {
 	Count  int    `bson:"count"`
 }
 
-func CastSimpleVote(ctx context.Context, vote *SimpleVote) error {
+func CastSimpleVote(ctx context.Context, vote *SimpleVote, voter *Voter) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	_, err := Client.Database(db).Collection("votes").InsertOne(ctx, vote)
+	if err != nil {
+		return err
+	}
+	_, err = Client.Database(db).Collection("voters").InsertOne(ctx, voter)
 	if err != nil {
 		return err
 	}

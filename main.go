@@ -3,31 +3,31 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	csh_auth "github.com/computersciencehouse/csh-auth"
+	"github.com/computersciencehouse/vote/database"
+	"github.com/computersciencehouse/vote/sse"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"html/template"
 	"net/http"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-	"html/template"
-	csh_auth "github.com/computersciencehouse/csh-auth"
-	"github.com/computersciencehouse/vote/database"
-	"github.com/computersciencehouse/vote/sse"
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func inc(x int) string {
-    return strconv.Itoa(x+1)
+	return strconv.Itoa(x + 1)
 }
 
 func main() {
 	r := gin.Default()
 	r.StaticFS("/static", http.Dir("static"))
 	r.SetFuncMap(template.FuncMap{
-            "inc": inc,
-        })
-        r.LoadHTMLGlob("templates/*")
+		"inc": inc,
+	})
+	r.LoadHTMLGlob("templates/*")
 	broker := sse.NewBroker()
 
 	csh := csh_auth.CSHAuth{}
@@ -241,8 +241,11 @@ func main() {
 			vote := database.SimpleVote{
 				Id:     "",
 				PollId: pId,
-				UserId: claims.UserInfo.Username,
 				Option: c.PostForm("option"),
+			}
+			voter := database.Voter{
+				PollId: pId,
+				UserId: claims.UserInfo.Username,
 			}
 
 			if hasOption(poll, c.PostForm("option")) {
@@ -253,13 +256,16 @@ func main() {
 				c.JSON(400, gin.H{"error": "Invalid Option"})
 				return
 			}
-			database.CastSimpleVote(c, &vote)
+			database.CastSimpleVote(c, &vote, &voter)
 		} else if poll.VoteType == database.POLL_TYPE_RANKED {
 			vote := database.RankedVote{
 				Id:      "",
 				PollId:  pId,
-				UserId:  claims.UserInfo.Username,
 				Options: make(map[string]int),
+			}
+			voter := database.Voter{
+				PollId: pId,
+				UserId: claims.UserInfo.Username,
 			}
 			for _, opt := range poll.Options {
 				if c.PostForm(opt) != "" {
@@ -281,7 +287,7 @@ func main() {
 					vote.Options[c.PostForm("writeinOption")] = rank
 				}
 			}
-			database.CastRankedVote(c, &vote)
+			database.CastRankedVote(c, &vote, &voter)
 		} else {
 			c.JSON(500, gin.H{"error": "Unknown Poll Type"})
 			return
@@ -314,10 +320,10 @@ func main() {
 			return
 		}
 
-        if poll.Hidden && poll.CreatedBy != claims.UserInfo.Username {
-            c.JSON(403, gin.H{"error": "Result Hidden"})
-            return
-        }
+		if poll.Hidden && poll.CreatedBy != claims.UserInfo.Username {
+			c.JSON(403, gin.H{"error": "Result Hidden"})
+			return
+		}
 
 		results, err := poll.GetResult(c)
 		if err != nil {
@@ -339,56 +345,55 @@ func main() {
 		})
 	}))
 
-    r.POST("/poll/:id/hide", csh.AuthWrapper(func(c *gin.Context) {
-        cl, _ := c.Get("cshauth")
-        claims := cl.(csh_auth.CSHClaims)
+	r.POST("/poll/:id/hide", csh.AuthWrapper(func(c *gin.Context) {
+		cl, _ := c.Get("cshauth")
+		claims := cl.(csh_auth.CSHClaims)
 
-        poll, err := database.GetPoll(c, c.Param("id"))
+		poll, err := database.GetPoll(c, c.Param("id"))
 
-        if err != nil {
-            c.JSON(500, gin.H{"error": err.Error()})
-            return
-        }
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 
-        if poll.CreatedBy != claims.UserInfo.Username {
-            c.JSON(403, gin.H{"error": "Only the creator can hide a poll result"})
-            return
-        }
+		if poll.CreatedBy != claims.UserInfo.Username {
+			c.JSON(403, gin.H{"error": "Only the creator can hide a poll result"})
+			return
+		}
 
-        err = poll.Hide(c)
-        if err != nil {
-            c.JSON(500, gin.H{"error": err.Error()})
-            return
-        }
+		err = poll.Hide(c)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 
-        c.Redirect(302, "/results/" + poll.Id)
-    }))
+		c.Redirect(302, "/results/"+poll.Id)
+	}))
 
+	r.POST("/poll/:id/reveal", csh.AuthWrapper(func(c *gin.Context) {
+		cl, _ := c.Get("cshauth")
+		claims := cl.(csh_auth.CSHClaims)
 
-    r.POST("/poll/:id/reveal", csh.AuthWrapper(func(c *gin.Context) {
-        cl, _ := c.Get("cshauth")
-        claims := cl.(csh_auth.CSHClaims)
+		poll, err := database.GetPoll(c, c.Param("id"))
 
-        poll, err := database.GetPoll(c, c.Param("id"))
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 
-        if err != nil {
-            c.JSON(500, gin.H{"error": err.Error()})
-            return
-        }
+		if poll.CreatedBy != claims.UserInfo.Username {
+			c.JSON(403, gin.H{"error": "Only the creator can reveal a poll result"})
+			return
+		}
 
-        if poll.CreatedBy != claims.UserInfo.Username {
-            c.JSON(403, gin.H{"error": "Only the creator can reveal a poll result"})
-            return
-        }
+		err = poll.Reveal(c)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
 
-        err = poll.Reveal(c)
-        if err != nil {
-            c.JSON(500, gin.H{"error": err.Error()})
-            return
-        }
-
-        c.Redirect(302, "/results/" + poll.Id)
-    }))
+		c.Redirect(302, "/results/"+poll.Id)
+	}))
 
 	r.POST("/poll/:id/close", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
