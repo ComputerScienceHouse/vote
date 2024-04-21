@@ -22,6 +22,6 @@ func HasVoted(ctx context.Context, pollId, userId string) (bool, error) {
 		fmt.Println(err)
 		return false, err
 	}
-
+	fmt.Println(count)
 	return count > 0, nil
 }
