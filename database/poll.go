@@ -2,7 +2,6 @@ package database
 
 import (
 	"context"
-	"sort"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -25,26 +24,26 @@ type Poll struct {
 const POLL_TYPE_SIMPLE = "simple"
 const POLL_TYPE_RANKED = "ranked"
 
-func GetPoll(id string) (*Poll, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func GetPoll(ctx context.Context, id string) (*Poll, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	objId, _ := primitive.ObjectIDFromHex(id)
 	var poll Poll
-	if err := Client.Database("vote").Collection("polls").FindOne(ctx, map[string]interface{}{"_id": objId}).Decode(&poll); err != nil {
+	if err := Client.Database(db).Collection("polls").FindOne(ctx, map[string]interface{}{"_id": objId}).Decode(&poll); err != nil {
 		return nil, err
 	}
 
 	return &poll, nil
 }
 
-func (poll *Poll) Close() error {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func (poll *Poll) Close(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	objId, _ := primitive.ObjectIDFromHex(poll.Id)
 
-	_, err := Client.Database("vote").Collection("polls").UpdateOne(ctx, map[string]interface{}{"_id": objId}, map[string]interface{}{"$set": map[string]interface{}{"open": false}})
+	_, err := Client.Database(db).Collection("polls").UpdateOne(ctx, map[string]interface{}{"_id": objId}, map[string]interface{}{"$set": map[string]interface{}{"open": false}})
 	if err != nil {
 		return err
 	}
@@ -52,13 +51,13 @@ func (poll *Poll) Close() error {
 	return nil
 }
 
-func (poll *Poll) Hide() error {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func (poll *Poll) Hide(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	objId, _ := primitive.ObjectIDFromHex(poll.Id)
 
-	_, err := Client.Database("vote").Collection("polls").UpdateOne(ctx, map[string]interface{}{"_id": objId}, map[string]interface{}{"$set": map[string]interface{}{"hidden": true}})
+	_, err := Client.Database(db).Collection("polls").UpdateOne(ctx, map[string]interface{}{"_id": objId}, map[string]interface{}{"$set": map[string]interface{}{"hidden": true}})
 	if err != nil {
 		return err
 	}
@@ -66,13 +65,13 @@ func (poll *Poll) Hide() error {
 	return nil
 }
 
-func (poll *Poll) Reveal() error {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func (poll *Poll) Reveal(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	objId, _ := primitive.ObjectIDFromHex(poll.Id)
 
-	_, err := Client.Database("vote").Collection("polls").UpdateOne(ctx, map[string]interface{}{"_id": objId}, map[string]interface{}{"$set": map[string]interface{}{"hidden": false}})
+	_, err := Client.Database(db).Collection("polls").UpdateOne(ctx, map[string]interface{}{"_id": objId}, map[string]interface{}{"$set": map[string]interface{}{"hidden": false}})
 	if err != nil {
 		return err
 	}
@@ -80,11 +79,11 @@ func (poll *Poll) Reveal() error {
 	return nil
 }
 
-func CreatePoll(poll *Poll) (string, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func CreatePoll(ctx context.Context, poll *Poll) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	result, err := Client.Database("vote").Collection("polls").InsertOne(ctx, poll)
+	result, err := Client.Database(db).Collection("polls").InsertOne(ctx, poll)
 	if err != nil {
 		return "", err
 	}
@@ -92,11 +91,11 @@ func CreatePoll(poll *Poll) (string, error) {
 	return result.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 
-func GetOpenPolls() ([]*Poll, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func GetOpenPolls(ctx context.Context) ([]*Poll, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	cursor, err := Client.Database("vote").Collection("polls").Find(ctx, map[string]interface{}{"open": true})
+	cursor, err := Client.Database(db).Collection("polls").Find(ctx, map[string]interface{}{"open": true})
 	if err != nil {
 		return nil, err
 
@@ -108,11 +107,11 @@ func GetOpenPolls() ([]*Poll, error) {
 	return polls, nil
 }
 
-func GetClosedOwnedPolls(userId string) ([]*Poll, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func GetClosedOwnedPolls(ctx context.Context, userId string) ([]*Poll, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	cursor, err := Client.Database("vote").Collection("polls").Find(ctx, map[string]interface{}{"createdBy": userId, "open": false})
+	cursor, err := Client.Database(db).Collection("polls").Find(ctx, map[string]interface{}{"createdBy": userId, "open": false})
 	if err != nil {
 		return nil, err
 	}
@@ -123,11 +122,11 @@ func GetClosedOwnedPolls(userId string) ([]*Poll, error) {
 	return polls, nil
 }
 
-func GetClosedVotedPolls(userId string) ([]*Poll, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	cursor, err := Client.Database("vote").Collection("votes").Aggregate(ctx, mongo.Pipeline{
+	cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 		{{
 			"$match", bson.D{
 				{"userId", userId},
@@ -168,15 +167,26 @@ func GetClosedVotedPolls(userId string) ([]*Poll, error) {
 	return polls, nil
 }
 
-func (poll *Poll) GetResult() (map[string]int, error) {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+func containsValue(slice []string, value string) bool {
+	for _, item := range slice {
+		if item == value {
+			return true
+		}
+	}
+	return false
+}
+
+func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
 	pollId, _ := primitive.ObjectIDFromHex(poll.Id)
-	finalResult := make(map[string]int)
+
+	finalResult := make([]map[string]int, 0)
 
 	if poll.VoteType == POLL_TYPE_SIMPLE {
-		cursor, err := Client.Database("vote").Collection("votes").Aggregate(ctx, mongo.Pipeline{
+		pollResult := make(map[string]int)
+		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 			{{
 				"$match", bson.D{
 					{"pollId", pollId},
@@ -200,15 +210,22 @@ func (poll *Poll) GetResult() (map[string]int, error) {
 
 		// Start by setting all the results to zero
 		for _, opt := range poll.Options {
-			finalResult[opt] = 0
+			pollResult[opt] = 0
 		}
 		// Overwrite those with given votes and add write-ins
 		for _, r := range results {
-			finalResult[r.Option] = r.Count
+			pollResult[r.Option] = r.Count
 		}
+		finalResult = append(finalResult, pollResult)
 		return finalResult, nil
 	} else if poll.VoteType == POLL_TYPE_RANKED {
-		cursor, err := Client.Database("vote").Collection("votes").Aggregate(ctx, mongo.Pipeline{
+		// What the fuck? - @skyz
+
+		// We want to store those that were eliminated
+		eliminated := make([]string, 0)
+
+		// Get all votes
+		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 			{{
 				"$match", bson.D{
 					{"pollId", pollId},
@@ -218,62 +235,67 @@ func (poll *Poll) GetResult() (map[string]int, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		var votes []RankedVote
 		cursor.All(ctx, &votes)
 
-		voteCount := len(votes)
-
-		// ALRIGHT LETS GO INSTANT RUNOFF VOTE LOGIC GOES HERE
+		// Iterate until we have a winner
 		for {
-			// Create an empty result for counting at this iteration
-			results := make(map[string]int)
-			// Iterate through all cast votes
+			// Contains candidates to number of votes in this route
+			tallied := make(map[string]int)
 			for _, vote := range votes {
-				// Create a list of the options in this vote and sort by preference
-				options := make([]string, 0, len(vote.Options))
-				for key := range vote.Options {
-					options = append(options, key)
-				}
-				sort.SliceStable(options, func(i, j int) bool {
-					return vote.Options[options[i]] < vote.Options[options[j]]
-				})
-
-				// Add a vote for the highest preference option
-				for _, option := range options {
-					// If that option has been eliminated, skip it and go to the next one
-					if containsKey(finalResult, option) {
-						continue
+				// Map a voter's ranked choice to an array
+				// From First to last Choice
+				picks := make([]string, 0)
+				for i, _ := range poll.Options {
+					for _, opt := range poll.Options {
+						if vote.Options[opt] == i+1 {
+							picks = append(picks, opt)
+						}
 					}
-					results[option] += 1
-					break
 				}
-			}
-
-			// Once we've gone through all votes, check if we have any options
-			// that have received more than half of the possible votes
-			for _, count := range results {
-				// If so, we're done
-				// This means we won't randomly mess with ties
-				if count*2 >= voteCount {
-					for k, c := range results {
-						finalResult[k] = c
+				// Go over picks until we find a non-eliminated candidate
+				for _, candidate := range picks {
+					if !containsValue(eliminated, candidate) {
+						if _, ok := tallied[candidate]; ok {
+							tallied[candidate]++
+						} else {
+							tallied[candidate] = 1
+						}
+						break
 					}
-					return finalResult, nil
 				}
 			}
-			// If no option has won yet, find the option with the least votes and eliminate
-			// it, noting the number of votes it recieved at the time
-			options := make([]string, 0, len(finalResult))
-			for key := range results {
-				options = append(options, key)
+			// Eliminate lowest vote getter
+			min_vote := 1000000
+			min_person := make([]string, 0)
+			for person, vote := range tallied {
+				if vote < min_vote {
+					min_vote = vote
+					min_person = make([]string, 0)
+					min_person = append(min_person, person)
+				} else if vote == min_vote {
+					min_person = append(min_person, person)
+				}
 			}
-			sort.SliceStable(options, func(i, j int) bool {
-				return results[options[i]] < results[options[j]]
-			})
-
-			finalResult[options[len(options)-1]] = results[options[len(options)-1]]
+			eliminated = append(eliminated, min_person...)
+			finalResult = append(finalResult, tallied)
+			// If one person has all the votes, they win
+			if len(tallied) == 1 {
+				break
+			}
+			// Check if all values in tallied are the same
+			// In that case, it's a tie?
+			allSame := true
+			for _, val := range tallied {
+				if val != min_vote {
+					allSame = false
+				}
+			}
+			if allSame {
+				break
+			}
 		}
+		return finalResult, nil
 	}
 	return nil, nil
 }

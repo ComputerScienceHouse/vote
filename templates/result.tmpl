@@ -34,11 +34,16 @@
       <br />
 
       <div id="results">
-        {{ range $option, $count := .Results }}
-        <div id="{{ $option }}" style="font-size: 1.25rem; line-height: 1.25">
-          {{ $option }}: {{ $count }}
-        </div>
-        <br />
+        {{ range $i, $val := .Results }}
+          {{ if eq $.VoteType "ranked" }}
+          <h4>Round {{ $i | inc }}</h4>
+          {{ end }}
+          {{ range $option, $count := $val }}
+          <div id="{{ $option }}" style="font-size: 1.25rem; line-height: 1.25">
+            {{ $option }}: {{ $count }}
+          </div>
+          <br />
+          {{ end }}
         {{ end }}
       </div>
       {{ if and (.IsOwner) (.IsHidden) }}
