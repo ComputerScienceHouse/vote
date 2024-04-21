@@ -219,8 +219,6 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		finalResult = append(finalResult, pollResult)
 		return finalResult, nil
 	} else if poll.VoteType == POLL_TYPE_RANKED {
-		// What the fuck? - @skyz
-
 		// We want to store those that were eliminated
 		eliminated := make([]string, 0)
 
