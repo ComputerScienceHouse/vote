@@ -374,6 +374,7 @@ func main() {
 		}
 		pId, _ := primitive.ObjectIDFromHex(poll.Id)
 		action := database.Action{
+			Id:     "",
 			PollId: pId,
 			Date:   primitive.NewDateTimeFromTime(time.Now()),
 			User:   claims.UserInfo.Username,
@@ -411,6 +412,7 @@ func main() {
 		}
 		pId, _ := primitive.ObjectIDFromHex(poll.Id)
 		action := database.Action{
+			Id:     "",
 			PollId: pId,
 			Date:   primitive.NewDateTimeFromTime(time.Now()),
 			User:   claims.UserInfo.Username,
@@ -439,7 +441,7 @@ func main() {
 		}
 
 		if poll.CreatedBy != claims.UserInfo.Username {
-			if containsString(claims.UserInfo.Groups, "active-rtp") || containsString(claims.UserInfo.Groups, "eboard") {
+			if containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") {
 			} else {
 				c.JSON(403, gin.H{"error": "You cannot end this poll."})
 				return
@@ -453,6 +455,7 @@ func main() {
 		}
 		pId, _ := primitive.ObjectIDFromHex(poll.Id)
 		action := database.Action{
+			Id:     "",
 			PollId: pId,
 			Date:   primitive.NewDateTimeFromTime(time.Now()),
 			User:   claims.UserInfo.Username,

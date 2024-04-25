@@ -7,7 +7,7 @@ import (
 )
 
 type Action struct {
-	Id     string             `bson:"_id"`
+	Id     string             `bson:"_id,omitempty"`
 	PollId primitive.ObjectID `bson:"pollId"`
 	Date   primitive.DateTime `bson:"date"`
 	User   string             `bson:"user"`
