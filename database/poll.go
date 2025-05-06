@@ -214,7 +214,6 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 	case POLL_TYPE_RANKED:
 		// We want to store those that were eliminated
 		eliminated := make([]string, 0)
-		eliminated = append(eliminated, "Isaac Ingram", "Charlotte George")
 
 		// Get all votes
 		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
