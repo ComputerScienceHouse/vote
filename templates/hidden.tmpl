@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <title>CSH Vote</title>
+    <!-- <link rel="stylesheet" href="https://themeswitcher.csh.rit.edu/api/get" /> -->
+    <link
+      rel="stylesheet"
+      href="https://assets.csh.rit.edu/csh-material-bootstrap/4.3.1/dist/csh-material-bootstrap.min.css"
+      media="screen"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      #lockdown {
+        width: 20%;
+        height: auto;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="/">Vote</a>
+        <div class="nav navbar-nav ml-auto">
+          <div class="navbar-user">
+            <img src="https://profiles.csh.rit.edu/image/{{ .Username }}" />
+            <span class="text-light">{{ .FullName }}</span>
+            <a href="/auth/logout" style="color: #c3c3c3"><i>(logout)</i></a>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <div
+      style="text-align: center; font-size: 1.2rem"
+      class="main p-5 error-page align-center"
+    >
+      <img id="lockdown" src="/static/material_lock.svg" alt="Attention!" />
+      <br />
+      <h2>The results are hidden!</h2>
+      <p>Looks like you aren't allowed to see the results.</p>
+      <p>
+        Please contact the owner of this poll or a Root Type Person if you think
+        this is an error.
+      </p>
+    </div>
+  </body>
+</html>
