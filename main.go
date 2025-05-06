@@ -280,15 +280,32 @@ func main() {
 				PollId: pId,
 				UserId: claims.UserInfo.Username,
 			}
+
+			voted := make([]bool, len(poll.Options))
+			max_num := len(vote.Options)
+
 			for _, opt := range poll.Options {
-				if c.PostForm(opt) != "" {
-					rank, err := strconv.Atoi(c.PostForm(opt))
-					if err != nil {
-						c.JSON(500, gin.H{"error": "error parsing votes"})
-					}
-					if rank > 0 {
-						vote.Options[opt] = rank
-					}
+				if c.PostForm(opt) == "" {
+					c.JSON(400, gin.H{"error": "did not fill out all rankings"})
+					return
+				}
+				rank, err := strconv.Atoi(c.PostForm(opt))
+				if err != nil {
+					c.JSON(400, gin.H{"error": "non-number ranking"})
+					return
+				}
+				if rank > 0 && rank <= max_num {
+					vote.Options[opt] = rank
+					voted[rank - 1] = true
+				} else {
+					c.JSON(400, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", max_num)})
+					return
+				}
+			}
+			for num, vote := range voted {
+				if !vote {
+					c.JSON(400, gin.H{"error": fmt.Sprintf("no candidate ranked at #%d", num+1)})
+					return
 				}
 			}
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
