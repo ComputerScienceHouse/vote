@@ -3,19 +3,20 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	cshAuth "github.com/computersciencehouse/csh-auth"
-	"github.com/computersciencehouse/vote/database"
-	"github.com/computersciencehouse/vote/sse"
-	"github.com/gin-gonic/gin"
-	"go.mongodb.org/mongo-driver/bson/primitive"
 	"html/template"
-	"mvdan.cc/xurls/v2"
 	"net/http"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+
+	cshAuth "github.com/computersciencehouse/csh-auth"
+	"github.com/computersciencehouse/vote/database"
+	"github.com/computersciencehouse/vote/sse"
+	"github.com/gin-gonic/gin"
+	"go.mongodb.org/mongo-driver/bson/primitive"
+	"mvdan.cc/xurls/v2"
 )
 
 func inc(x int) string {
@@ -309,6 +310,9 @@ func main() {
 				}
 			}
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
+				if vote.Options[c.PostForm("writeinOption")] != 0 {
+					c.JSON(500, gin.H{"error": "write-in is already an option"})
+				}
 				rank, err := strconv.Atoi(c.PostForm("writein"))
 				if err != nil {
 					c.JSON(500, gin.H{"error": "error parsing votes"})
