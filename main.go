@@ -310,10 +310,16 @@ func main() {
 				}
 			}
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
-				if vote.Options[c.PostForm("writeinOption")] != 0 {
-					c.JSON(500, gin.H{"error": "write-in is already an option"})
-					return
+				for candidate := range vote.Options {
+					if strings.EqualFold(candidate, strings.TrimSpace(c.PostForm("writeinOption"))) {
+						c.JSON(500, gin.H{"error": "write-in is already an option"})
+						return
+					}
 				}
+				// if vote.Options[c.PostForm("writeinOption")] != 0 {
+				// 	c.JSON(500, gin.H{"error": "write-in is already an option"})
+				// 	return
+				// }
 				rank, err := strconv.Atoi(c.PostForm("writein"))
 				if err != nil {
 					c.JSON(500, gin.H{"error": "error parsing votes"})
