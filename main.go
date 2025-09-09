@@ -312,6 +312,7 @@ func main() {
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				if vote.Options[c.PostForm("writeinOption")] != 0 {
 					c.JSON(500, gin.H{"error": "write-in is already an option"})
+					return
 				}
 				rank, err := strconv.Atoi(c.PostForm("writein"))
 				if err != nil {
