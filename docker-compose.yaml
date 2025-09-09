@@ -9,9 +9,10 @@ services:
       VOTE_HOST: 'http://localhost:8080'
       VOTE_JWT_SECRET: 4874c601dda90a01c7543c571be08680
       VOTE_MONGODB_URI: "mongodb://vote:c1f66aac6b4fafbef3c659371b8a50ed@mongodb/vote?authSource=admin"
-      VOTE_OIDC_ID: vote
+      VOTE_OIDC_ID: vote-dev
       VOTE_OIDC_SECRET: "${VOTE_OIDC_SECRET}"
       VOTE_STATE: 27a28540e47ec786b7bdad03f83171b3
+      VOTE_MONGO_DB: "vote"
     ports:
       - "127.0.0.1:8080:8080"
 
