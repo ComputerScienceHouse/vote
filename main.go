@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"os"
 	"sort"
@@ -297,7 +298,7 @@ func main() {
 				}
 				if rank > 0 && rank <= max_num {
 					vote.Options[opt] = rank
-					voted[rank - 1] = true
+					voted[rank-1] = true
 				} else {
 					c.JSON(400, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", max_num)})
 					return
@@ -513,7 +514,7 @@ func main() {
 	r.Run()
 }
 
-func canVote(groups []string) bool {
+func canVote(groups []string, username string) bool {
 	var active, fallCoop, springCoop bool
 	for _, group := range groups {
 		if group == "active" {
@@ -530,10 +531,38 @@ func canVote(groups []string) bool {
 		}
 	}
 
+	type Result struct {
+		Result bool `json:"result"`
+	}
+
+	// gatekeep
+	gatekeepURL := "https://conditional.csh.rit.edu/gatekeep/" + username
+	voteToken := os.Getenv("VOTE_TOKEN")
+	req, err := http.NewRequest("GET", gatekeepURL, nil)
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+	req.Header.Add("X-VOTE-TOKEN", voteToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+	defer resp.Body.Close()
+
+	var result Result
+	err = json.NewDecoder(resp.Body).Decode(&result)
+	if err != nil {
+		log.Fatal(err)
+		return false
+	}
+	gatekeep := result.Result
 	if time.Now().Month() > time.July {
-		return active && !fallCoop
+		return active && !fallCoop && gatekeep
 	} else {
-		return active && !springCoop
+		return active && !springCoop && gatekeep
 	}
 }
 
