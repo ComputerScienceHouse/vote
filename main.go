@@ -100,7 +100,7 @@ func main() {
 	r.GET("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !canVote(claims.UserInfo.Groups) {
+		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, false) {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -117,7 +117,7 @@ func main() {
 	r.POST("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !canVote(claims.UserInfo.Groups) {
+		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, false) {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -133,6 +133,7 @@ func main() {
 			VoteType:         database.POLL_TYPE_SIMPLE,
 			Open:             true,
 			Hidden:           false,
+			Gatekeep:         c.PostForm("gatekeep") == "true",
 			AllowWriteIns:    c.PostForm("allowWriteIn") == "true",
 		}
 		if c.PostForm("rankedChoice") == "true" {
@@ -179,7 +180,7 @@ func main() {
 		}
 
 		// If the user can't vote, just show them results
-		if !canVote(claims.UserInfo.Groups) {
+		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, poll.Gatekeep) {
 			c.Redirect(302, "/results/"+poll.Id)
 			return
 		}
@@ -222,17 +223,18 @@ func main() {
 	r.POST("/poll/:id", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !canVote(claims.UserInfo.Groups) {
-			c.HTML(403, "unauthorized.tmpl", gin.H{
-				"Username": claims.UserInfo.Username,
-				"FullName": claims.UserInfo.FullName,
-			})
-			return
-		}
 
 		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, poll.Gatekeep) {
+			c.HTML(403, "unauthorized.tmpl", gin.H{
+				"Username": claims.UserInfo.Username,
+				"FullName": claims.UserInfo.FullName,
+			})
 			return
 		}
 
@@ -514,7 +516,7 @@ func main() {
 	r.Run()
 }
 
-func canVote(groups []string, username string) bool {
+func canVote(groups []string, username string, enforce_gatekeep bool) bool {
 	var active, fallCoop, springCoop bool
 	for _, group := range groups {
 		if group == "active" {
@@ -532,7 +534,10 @@ func canVote(groups []string, username string) bool {
 	}
 
 	type Result struct {
-		Result bool `json:"result"`
+		Result     bool `json:"result"`
+		H_Meetings int  `json:"h_meetings"`
+		D_Meetings int  `json:"d_meetings"`
+		T_Seminars int  `json:"t_seminars"`
 	}
 
 	// gatekeep
@@ -558,11 +563,11 @@ func canVote(groups []string, username string) bool {
 		log.Fatal(err)
 		return false
 	}
-	gatekeep := result.Result
+	gatekeep_result := result.Result
 	if time.Now().Month() > time.July {
-		return active && !fallCoop && gatekeep
+		return active && !fallCoop && (gatekeep_result || !enforce_gatekeep)
 	} else {
-		return active && !springCoop && gatekeep
+		return active && !springCoop && (gatekeep_result || !enforce_gatekeep)
 	}
 }
 
