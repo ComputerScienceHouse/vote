@@ -20,6 +20,10 @@ import (
 	"mvdan.cc/xurls/v2"
 )
 
+var VOTE_TOKEN string = os.Getenv("VOTE_TOKEN")
+
+const CONDITIONAL_GATEKEEP_URL string = "https://conditional.csh.rit.edu/gatekeep/"
+
 func inc(x int) string {
 	return strconv.Itoa(x + 1)
 }
@@ -516,7 +520,14 @@ func main() {
 	r.Run()
 }
 
-func canVote(groups []string, username string, enforce_gatekeep bool) bool {
+type Result struct {
+	Result     bool `json:"result"`
+	H_Meetings int  `json:"h_meetings"`
+	D_Meetings int  `json:"d_meetings"`
+	T_Seminars int  `json:"t_seminars"`
+}
+
+func canVote(groups []string, username string, gatekeepEnforcedPoll bool) bool {
 	var active, fallCoop, springCoop bool
 	for _, group := range groups {
 		if group == "active" {
@@ -533,42 +544,38 @@ func canVote(groups []string, username string, enforce_gatekeep bool) bool {
 		}
 	}
 
-	type Result struct {
-		Result     bool `json:"result"`
-		H_Meetings int  `json:"h_meetings"`
-		D_Meetings int  `json:"d_meetings"`
-		T_Seminars int  `json:"t_seminars"`
-	}
+	passesGatekeep := true
+	// check if the user passes gatekeep
+	if gatekeepEnforcedPoll {
+		endpointURL := CONDITIONAL_GATEKEEP_URL + username
+		req, err := http.NewRequest("GET", endpointURL, nil)
+		if err != nil {
+			log.Fatal(err)
+			return false
+		}
+		req.Header.Add("X-VOTE-TOKEN", VOTE_TOKEN)
 
-	// gatekeep
-	gatekeepURL := "https://conditional.csh.rit.edu/gatekeep/" + username
-	voteToken := os.Getenv("VOTE_TOKEN")
-	req, err := http.NewRequest("GET", gatekeepURL, nil)
-	if err != nil {
-		log.Fatal(err)
-		return false
-	}
-	req.Header.Add("X-VOTE-TOKEN", voteToken)
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			log.Fatal(err)
+			return false
+		}
+		defer resp.Body.Close()
 
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		log.Fatal(err)
-		return false
+		var result Result
+		err = json.NewDecoder(resp.Body).Decode(&result)
+		if err != nil {
+			log.Fatal(err)
+			return false
+		}
+		passesGatekeep = result.Result
 	}
-	defer resp.Body.Close()
-
-	var result Result
-	err = json.NewDecoder(resp.Body).Decode(&result)
-	if err != nil {
-		log.Fatal(err)
-		return false
-	}
-	gatekeep_result := result.Result
 	if time.Now().Month() > time.July {
-		return active && !fallCoop && (gatekeep_result || !enforce_gatekeep)
+		return active && !fallCoop && passesGatekeep
 	} else {
-		return active && !springCoop && (gatekeep_result || !enforce_gatekeep)
+		return active && !springCoop && passesGatekeep
 	}
+
 }
 
 func uniquePolls(polls []*database.Poll) []*database.Poll {
