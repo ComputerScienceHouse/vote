@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
-	"log"
 	"net/http"
 	"os"
 	"sort"
@@ -14,8 +13,10 @@ import (
 
 	cshAuth "github.com/computersciencehouse/csh-auth"
 	"github.com/computersciencehouse/vote/database"
+	"github.com/computersciencehouse/vote/logging"
 	"github.com/computersciencehouse/vote/sse"
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"mvdan.cc/xurls/v2"
 )
@@ -550,14 +551,14 @@ func canVote(groups []string, username string, gatekeepEnforcedPoll bool) bool {
 		endpointURL := CONDITIONAL_GATEKEEP_URL + username
 		req, err := http.NewRequest("GET", endpointURL, nil)
 		if err != nil {
-			log.Fatal(err)
+			logging.Logger.WithFields(logrus.Fields{"method": "canVote"}).Error(err)
 			return false
 		}
 		req.Header.Add("X-VOTE-TOKEN", VOTE_TOKEN)
 
 		resp, err := http.DefaultClient.Do(req)
 		if err != nil {
-			log.Fatal(err)
+			logging.Logger.WithFields(logrus.Fields{"method": "canVote"}).Error(err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -565,7 +566,7 @@ func canVote(groups []string, username string, gatekeepEnforcedPoll bool) bool {
 		var result Result
 		err = json.NewDecoder(resp.Body).Decode(&result)
 		if err != nil {
-			log.Fatal(err)
+			logging.Logger.WithFields(logrus.Fields{"method": "canVote"}).Error(err)
 			return false
 		}
 		passesGatekeep = result.Result
