@@ -18,6 +18,7 @@ type Poll struct {
 	Options          []string `bson:"options"`
 	Open             bool     `bson:"open"`
 	Gatekeep         bool     `bson:"gatekeep"`
+	WaivedUsers      []string `bson:"waivedUsers"`
 	Hidden           bool     `bson:"hidden"`
 	AllowWriteIns    bool     `bson:"writeins"`
 }

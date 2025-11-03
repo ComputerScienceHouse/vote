@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"os"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -105,7 +106,7 @@ func main() {
 	r.GET("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, false) {
+		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, false, []string{}) {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -122,7 +123,7 @@ func main() {
 	r.POST("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, false) {
+		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, false, []string{}) {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -152,7 +153,7 @@ func main() {
 			poll.Options = []string{"Fail", "Conditional", "Abstain"}
 		case "custom":
 			poll.Options = []string{}
-			for _, opt := range strings.Split(c.PostForm("customOptions"), ",") {
+			for opt := range strings.SplitSeq(c.PostForm("customOptions"), ",") {
 				poll.Options = append(poll.Options, strings.TrimSpace(opt))
 				if !containsString(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
 					poll.Options = append(poll.Options, "Abstain")
@@ -161,6 +162,12 @@ func main() {
 		case "pass-fail":
 		default:
 			poll.Options = []string{"Pass", "Fail", "Abstain"}
+		}
+		if poll.Gatekeep {
+			poll.WaivedUsers = []string{}
+			for user := range strings.SplitSeq(c.PostForm("waivedUsers"), ",") {
+				poll.WaivedUsers = append(poll.WaivedUsers, strings.TrimSpace(user))
+			}
 		}
 
 		pollId, err := database.CreatePoll(c, poll)
@@ -185,7 +192,7 @@ func main() {
 		}
 
 		// If the user can't vote, just show them results
-		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, poll.Gatekeep) {
+		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, poll.Gatekeep, poll.WaivedUsers) {
 			c.Redirect(302, "/results/"+poll.Id)
 			return
 		}
@@ -235,7 +242,7 @@ func main() {
 			return
 		}
 
-		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, poll.Gatekeep) {
+		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, poll.Gatekeep, poll.WaivedUsers) {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -528,7 +535,10 @@ type Result struct {
 	T_Seminars int  `json:"t_seminars"`
 }
 
-func canVote(groups []string, username string, gatekeepEnforcedPoll bool) bool {
+func canVote(groups []string, username string, gatekeepEnforcedPoll bool, waivedUsers []string) bool {
+	if slices.Contains(waivedUsers, username) {
+		return true
+	}
 	var active, fallCoop, springCoop bool
 	for _, group := range groups {
 		if group == "active" {
