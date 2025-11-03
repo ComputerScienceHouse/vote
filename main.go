@@ -23,7 +23,7 @@ import (
 
 var VOTE_TOKEN string = os.Getenv("VOTE_TOKEN")
 
-const CONDITIONAL_GATEKEEP_URL string = "https://conditional.csh.rit.edu/gatekeep/"
+var CONDITIONAL_GATEKEEP_URL string = os.Getenv("CONDITIONAL_URL")
 
 func inc(x int) string {
 	return strconv.Itoa(x + 1)

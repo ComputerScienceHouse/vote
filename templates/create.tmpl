@@ -73,15 +73,25 @@
           <span>Ranked Choice Vote</span>
         </div> 
         <div class="form-group">
+            <input
+              type="checkbox"
+              name="gatekeep"
+              id="gatekeep"
+              value="true"
+              checked
+              onchange="onGatekeepChange()"
+            />
+            <option value="gatekeep" selected>Gatekeep Required</option>
+          </select>
+        <div style="display:none;" id="waivedUsers" class="form-group">
           <input
-            type="checkbox"
-            name="gatekeep"
-            value="true"
-            checked
+            type="text"
+            name="waivedUsers"
+            class="form-control"
+            placeholder="Waive Usernames (Comma-separated)"
           />
-          <span>Gatekeep Required</span>
         </div>
-        <input type="submit" class="btn btn-primary" value="Create" />
+<input type="submit" class="btn btn-primary" value="Create" />
       </form>
     </div>
     <script>
@@ -91,6 +101,16 @@
         } else {
           document.getElementById("customOptions").style.display = "none";
         }
+      }
+      function onGatekeepChange(){
+      const gatekeepBox = document.getElementById("gatekeep");
+      const waivedUsers = document.getElementById("waivedUsers");
+      if (gatekeepBox.checked){
+        document.getElementById("waivedUsers").style.display = null
+      }
+      else{
+      document.getElementById("waivedUsers").style.display = "none"
+      }
       }
     </script>
   </body>
