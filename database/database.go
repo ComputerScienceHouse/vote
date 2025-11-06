@@ -3,6 +3,7 @@ package database
 import (
 	"context"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/computersciencehouse/vote/logging"
@@ -20,7 +21,7 @@ const (
 )
 
 var Client = Connect()
-var db = os.Getenv("VOTE_MONGO_DB")
+var db = ""
 
 func Connect() *mongo.Client {
 	logging.Logger.WithFields(logrus.Fields{"module": "database", "method": "Connect"}).Info("beginning database connection")
@@ -28,16 +29,19 @@ func Connect() *mongo.Client {
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
 	defer cancel()
 
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI(os.Getenv("VOTE_MONGODB_URI")))
+	uri := os.Getenv("VOTE_MONGODB_URI")
+	client, err := mongo.Connect(ctx, options.Client().ApplyURI(uri))
+
 	if err != nil {
 		logging.Logger.WithFields(logrus.Fields{"error": err, "module": "database", "method": "Connect"}).Fatal("error connecting to database")
 	}
 
-	if err := client.Ping(ctx, readpref.Primary()); err != nil {
+	if err = client.Ping(ctx, readpref.Primary()); err != nil {
 		logging.Logger.WithFields(logrus.Fields{"error": err, "module": "database", "method": "Connect"}).Fatal("error pinging database")
 	}
 
 	logging.Logger.WithFields(logrus.Fields{"module": "database", "method": "Connect"}).Info("connected to mongodb")
+	db = strings.Split(strings.Split(uri, "/")[2], "?")[0]
 
 	return client
 }
