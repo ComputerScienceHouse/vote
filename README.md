@@ -23,7 +23,7 @@ VOTE_OIDC_ID=vote
 VOTE_OIDC_SECRET=
 VOTE_STATE=
 VOTE_TOKEN=
-VOTE_CONDITIONAL_URL=http://conditional.csh.rit.edu/gatekeep/
+VOTE_CONDITIONAL_URL=https://conditional.csh.rit.edu/gatekeep/
 ```
 
 ## To-Dos
