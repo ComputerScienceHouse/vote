@@ -41,7 +41,7 @@ func Connect() *mongo.Client {
 	}
 
 	logging.Logger.WithFields(logrus.Fields{"module": "database", "method": "Connect"}).Info("connected to mongodb")
-	db = strings.Split(strings.Split(uri, "/")[2], "?")[0]
+	db = strings.Split(strings.Split(uri, "/")[3], "?")[0]
 
 	return client
 }
