@@ -17,9 +17,8 @@ You'll need to set up these values in your environment. Ask an RTP for OIDC cred
 ```
 VOTE_HOST=http://localhost:8080
 VOTE_JWT_SECRET=
-VOTE_MONGO_DB=
 VOTE_MONGODB_URI=
-VOTE_OIDC_ID=vote
+VOTE_OIDC_ID=
 VOTE_OIDC_SECRET=
 VOTE_STATE=
 VOTE_TOKEN=
