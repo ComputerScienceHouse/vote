@@ -7,6 +7,7 @@ COPY *.go .
 COPY database database
 COPY logging logging
 COPY sse sse
+RUN go build -v -o vote
 
 FROM docker.io/alpine
 RUN apk add --no-cache tzdata
