@@ -2,9 +2,7 @@
 
 because paper ballots are so 2019
 
-Imagine this. You're a somehow still functioning student organization of computer nerds. You've been using paper ballots to vote for the last 40 years. But then, disaster strikes! Global ~~ligma~~ COVID takes over, and if you so much look at a slip of paper, The Virus will take you. Enter vote, a 🚀 blazingly fast 🚀... Wait. This is Go, not Rust. It can't be blazingly fast. Uhh... Enter vote, a reasonably fast voting app with less memory safety than if it was written in Rust. But hey, gotta Pokemon _Go_ to the polls somehow, right? Right...? This is why I'm a software engineer and not a comedian.
-
-Anyways, now we can vote online. It's cool, I guess? We have things such as:
+Implementation 
 
 - **Server-side rendering**. That's right, this site (should) (mostly) work without JavaScript.
 - **Server Sent Events** for real-time vote results
@@ -23,14 +21,14 @@ VOTE_OIDC_SECRET=
 VOTE_STATE=
 VOTE_TOKEN=
 VOTE_CONDITIONAL_URL=https://conditional.csh.rit.edu/gatekeep/
+VOTE_ANNOUNCEMENTS_CHANNEL_ID=
+VOTE_SLACK_APP_TOKEN=
+VOTE_SLACK_BOT_TOKEN=
 ```
 
 ## To-Dos
 
-- [x] Custom vote options
-- [x] Write-in votes
-- [x] Ranked choice voting
-- [x] Show options that got no votes
-- [x] Allow results to be hidden until a vote is closed
 - [ ] Don't let the user fuck it up
-- [ ] Show eboard polls with a higher priority
+- [ ] Show E-Board polls with a higher priority
+- [ ] Display the reason why a user is on the results page of a running poll
+- [ ] Display minimum time left that a poll is open

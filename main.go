@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -22,9 +23,9 @@ import (
 	"mvdan.cc/xurls/v2"
 )
 
-var VOTE_TOKEN string = os.Getenv("VOTE_TOKEN")
-
-var CONDITIONAL_GATEKEEP_URL string = os.Getenv("VOTE_CONDITIONAL_URL")
+var VOTE_TOKEN = os.Getenv("VOTE_TOKEN")
+var CONDITIONAL_GATEKEEP_URL = os.Getenv("VOTE_CONDITIONAL_URL")
+var VOTE_HOST = os.Getenv("VOTE_HOST")
 
 func inc(x int) string {
 	return strconv.Itoa(x + 1)
@@ -36,6 +37,8 @@ func MakeLinks(s string) template.HTML {
 	safe := rx.ReplaceAllString(s, `<a href="$0" target="_blank">$0</a>`)
 	return template.HTML(safe)
 }
+
+var oidcClient = OIDCClient{}
 
 func main() {
 	r := gin.Default()
@@ -53,12 +56,13 @@ func main() {
 		os.Getenv("VOTE_OIDC_SECRET"),
 		os.Getenv("VOTE_JWT_SECRET"),
 		os.Getenv("VOTE_STATE"),
-		os.Getenv("VOTE_HOST"),
-		os.Getenv("VOTE_HOST")+"/auth/callback",
-		os.Getenv("VOTE_HOST")+"/auth/login",
+		VOTE_HOST,
+		VOTE_HOST+"/auth/callback",
+		VOTE_HOST+"/auth/login",
 		[]string{"profile", "email", "groups"},
 	)
-
+	oidcClient.setupOidcClient(os.Getenv("VOTE_OIDC_ID"), os.Getenv("VOTE_OIDC_SECRET"))
+	InitConstitution()
 	r.GET("/auth/login", csh.AuthRequest)
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
@@ -106,7 +110,7 @@ func main() {
 	r.GET("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, false, []string{}) {
+		if !slices.Contains(claims.UserInfo.Groups, "active") {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -117,13 +121,14 @@ func main() {
 		c.HTML(200, "create.tmpl", gin.H{
 			"Username": claims.UserInfo.Username,
 			"FullName": claims.UserInfo.FullName,
+			"IsEvals":  containsString(claims.UserInfo.Groups, "eboard-evaluations"), // might need to be is evals
 		})
 	}))
 
 	r.POST("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, false, []string{}) {
+		if !slices.Contains(claims.UserInfo.Groups, "active") {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -137,6 +142,7 @@ func main() {
 			ShortDescription: c.PostForm("shortDescription"),
 			LongDescription:  c.PostForm("longDescription"),
 			VoteType:         database.POLL_TYPE_SIMPLE,
+			OpenedTime:       time.Now(),
 			Open:             true,
 			Hidden:           false,
 			Gatekeep:         c.PostForm("gatekeep") == "true",
@@ -164,9 +170,17 @@ func main() {
 			poll.Options = []string{"Pass", "Fail", "Abstain"}
 		}
 		if poll.Gatekeep {
-			poll.WaivedUsers = []string{}
+			//TODO: invert-this!!
+			if slices.Contains(claims.UserInfo.Groups, "eboard-evaluations") {
+				c.HTML(403, "unauthorized.tmpl", gin.H{
+					"Username": claims.UserInfo.Username,
+					"FullName": claims.UserInfo.FullName,
+				})
+				return
+			}
+			poll.AllowedUsers = GetEligibleVoters()
 			for user := range strings.SplitSeq(c.PostForm("waivedUsers"), ",") {
-				poll.WaivedUsers = append(poll.WaivedUsers, strings.TrimSpace(user))
+				poll.AllowedUsers = append(poll.AllowedUsers, strings.TrimSpace(user))
 			}
 		}
 
@@ -192,22 +206,7 @@ func main() {
 		}
 
 		// If the user can't vote, just show them results
-		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, poll.Gatekeep, poll.WaivedUsers) {
-			c.Redirect(302, "/results/"+poll.Id)
-			return
-		}
-
-		if !poll.Open {
-			c.Redirect(302, "/results/"+poll.Id)
-			return
-		}
-
-		hasVoted, err := database.HasVoted(c, poll.Id, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		if hasVoted {
+		if canVote(claims.UserInfo, *poll, poll.AllowedUsers) > 0 || !poll.Open {
 			c.Redirect(302, "/results/"+poll.Id)
 			return
 		}
@@ -218,6 +217,9 @@ func main() {
 		}
 
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
+		if poll.Gatekeep {
+			canModify = false
+		}
 
 		c.HTML(200, "poll.tmpl", gin.H{
 			"Id":               poll.Id,
@@ -232,6 +234,7 @@ func main() {
 			"FullName":         claims.UserInfo.FullName,
 		})
 	}))
+
 	r.POST("/poll/:id", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
@@ -242,20 +245,7 @@ func main() {
 			return
 		}
 
-		if !canVote(claims.UserInfo.Groups, claims.UserInfo.Username, poll.Gatekeep, poll.WaivedUsers) {
-			c.HTML(403, "unauthorized.tmpl", gin.H{
-				"Username": claims.UserInfo.Username,
-				"FullName": claims.UserInfo.FullName,
-			})
-			return
-		}
-
-		hasVoted, err := database.HasVoted(c, poll.Id, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		if hasVoted || !poll.Open {
+		if canVote(claims.UserInfo, *poll, poll.AllowedUsers) > 0 || !poll.Open {
 			c.Redirect(302, "/results/"+poll.Id)
 			return
 		}
@@ -298,7 +288,7 @@ func main() {
 			}
 
 			voted := make([]bool, len(poll.Options))
-			max_num := len(vote.Options)
+			maxNum := len(vote.Options)
 
 			for _, opt := range poll.Options {
 				if c.PostForm(opt) == "" {
@@ -310,16 +300,16 @@ func main() {
 					c.JSON(400, gin.H{"error": "non-number ranking"})
 					return
 				}
-				if rank > 0 && rank <= max_num {
+				if rank > 0 && rank <= maxNum {
 					vote.Options[opt] = rank
 					voted[rank-1] = true
 				} else {
-					c.JSON(400, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", max_num)})
+					c.JSON(400, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", maxNum)})
 					return
 				}
 			}
-			for num, vote := range voted {
-				if !vote {
+			for num, voteOpt := range voted {
+				if !voteOpt {
 					c.JSON(400, gin.H{"error": fmt.Sprintf("no candidate ranked at #%d", num+1)})
 					return
 				}
@@ -387,6 +377,9 @@ func main() {
 		}
 
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
+		if poll.Gatekeep {
+			canModify = false
+		}
 
 		c.HTML(200, "result.tmpl", gin.H{
 			"Id":               poll.Id,
@@ -407,7 +400,6 @@ func main() {
 		claims := cl.(cshAuth.CSHClaims)
 
 		poll, err := database.GetPoll(c, c.Param("id"))
-
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -445,7 +437,6 @@ func main() {
 		claims := cl.(cshAuth.CSHClaims)
 
 		poll, err := database.GetPoll(c, c.Param("id"))
-
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
 			return
@@ -485,9 +476,13 @@ func main() {
 		// A user should be able to end their own polls, regardless of if they can vote
 
 		poll, err := database.GetPoll(c, c.Param("id"))
-
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+
+		if poll.Gatekeep {
+			c.JSON(http.StatusForbidden, gin.H{"error": "This poll cannot be closed manually"})
 			return
 		}
 
@@ -528,65 +523,29 @@ func main() {
 	r.Run()
 }
 
-type Result struct {
-	Result     bool `json:"result"`
-	H_Meetings int  `json:"h_meetings"`
-	D_Meetings int  `json:"d_meetings"`
-	T_Seminars int  `json:"t_seminars"`
-}
-
-func canVote(groups []string, username string, gatekeepEnforcedPoll bool, waivedUsers []string) bool {
-	if slices.Contains(waivedUsers, username) {
-		return true
+// canVote determines whether a user can cast a vote.
+//
+// returns an integer value: 0 is success, 1 is database error, 3 is not active, 4 is gatekept, 9 is already voted
+// TODO: use the return value to influence messages shown on results page
+func canVote(user cshAuth.CSHUserInfo, poll database.Poll, allowedUsers []string) int {
+	// always false if user is not active
+	if !slices.Contains(user.Groups, "active") {
+		return 3
 	}
-	var active, fallCoop, springCoop bool
-	for _, group := range groups {
-		if group == "active" {
-			active = true
-		}
-		if group == "fall_coop" {
-			fallCoop = true
-		}
-		if group == "spring_coop" {
-			springCoop = true
-		}
-		if group == "10weeks" {
-			return false
-		}
+	voted, err := database.HasVoted(context.Background(), poll.Id, user.Username)
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "canVote"}).Error(err)
+		return 1
 	}
-
-	passesGatekeep := true
-	// check if the user passes gatekeep
-	if gatekeepEnforcedPoll {
-		endpointURL := CONDITIONAL_GATEKEEP_URL + username
-		req, err := http.NewRequest("GET", endpointURL, nil)
-		if err != nil {
-			logging.Logger.WithFields(logrus.Fields{"method": "canVote"}).Error(err)
-			return false
-		}
-		req.Header.Add("X-VOTE-TOKEN", VOTE_TOKEN)
-
-		resp, err := http.DefaultClient.Do(req)
-		if err != nil {
-			logging.Logger.WithFields(logrus.Fields{"method": "canVote"}).Error(err)
-			return false
-		}
-		defer resp.Body.Close()
-
-		var result Result
-		err = json.NewDecoder(resp.Body).Decode(&result)
-		if err != nil {
-			logging.Logger.WithFields(logrus.Fields{"method": "canVote"}).Error(err)
-			return false
-		}
-		passesGatekeep = result.Result
+	if voted {
+		return 9
 	}
-	if time.Now().Month() > time.July {
-		return active && !fallCoop && passesGatekeep
-	} else {
-		return active && !springCoop && passesGatekeep
-	}
-
+	if poll.Gatekeep { //if gatekeep is enabled, but they aren't allowed to vote in the poll, false
+		if !slices.Contains(allowedUsers, user.Username) {
+			return 4
+		}
+	} //otherwise true
+	return 0
 }
 
 func uniquePolls(polls []*database.Poll) []*database.Poll {
