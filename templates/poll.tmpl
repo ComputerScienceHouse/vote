@@ -101,7 +101,7 @@
         <br />
         <button type="submit" class="btn btn-primary">Submit</button>
       </form>
-      {{ if .CanModify }}
+      {{ if and (.CanModify) (not .Gatekeep) }}
         <br />
         <br />
         <form action="/poll/{{ .Id }}/close" method="POST">

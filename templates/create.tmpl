@@ -71,7 +71,8 @@
             value="true"
           >
           <span>Ranked Choice Vote</span>
-        </div> 
+        </div>
+        {{ if .IsEvals }}
         <div class="form-group">
             <input
               type="checkbox"
@@ -91,6 +92,7 @@
             placeholder="Waive Usernames (Comma-separated)"
           >
         </div>
+        {{ end }}
         <input type="submit" class="btn btn-primary" value="Create">
       </form>
     </div>

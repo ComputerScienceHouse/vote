@@ -60,7 +60,7 @@
         <button type="submit" class="btn btn-danger">Hide Votes</button>
       </form>
       {{ end }}
-      {{ if and (.CanModify) (.IsOpen) }}
+      {{ if and (and (.CanModify) (.IsOpen)) (not .Gatekeep) }}
       <br />
       <br />
       <form action="/poll/{{ .Id }}/close" method="POST">

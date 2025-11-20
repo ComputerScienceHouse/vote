@@ -10,17 +10,18 @@ import (
 )
 
 type Poll struct {
-	Id               string   `bson:"_id,omitempty"`
-	CreatedBy        string   `bson:"createdBy"`
-	ShortDescription string   `bson:"shortDescription"`
-	LongDescription  string   `bson:"longDescription"`
-	VoteType         string   `bson:"voteType"`
-	Options          []string `bson:"options"`
-	Open             bool     `bson:"open"`
-	Gatekeep         bool     `bson:"gatekeep"`
-	WaivedUsers      []string `bson:"waivedUsers"`
-	Hidden           bool     `bson:"hidden"`
-	AllowWriteIns    bool     `bson:"writeins"`
+	Id               string    `bson:"_id,omitempty"`
+	CreatedBy        string    `bson:"createdBy"`
+	ShortDescription string    `bson:"shortDescription"`
+	LongDescription  string    `bson:"longDescription"`
+	VoteType         string    `bson:"voteType"`
+	Options          []string  `bson:"options"`
+	OpenedTime       time.Time `bson:"openedTime"`
+	Open             bool      `bson:"open"`
+	Gatekeep         bool      `bson:"gatekeep"`
+	AllowedUsers     []string  `bson:"allowedUsers"`
+	Hidden           bool      `bson:"hidden"`
+	AllowWriteIns    bool      `bson:"writeins"`
 }
 
 const POLL_TYPE_SIMPLE = "simple"
@@ -98,6 +99,22 @@ func GetOpenPolls(ctx context.Context) ([]*Poll, error) {
 	defer cancel()
 
 	cursor, err := Client.Database(db).Collection("polls").Find(ctx, map[string]interface{}{"open": true})
+	if err != nil {
+		return nil, err
+
+	}
+
+	var polls []*Poll
+	cursor.All(ctx, &polls)
+
+	return polls, nil
+}
+
+func GetOpenGatekeepPolls(ctx context.Context) ([]*Poll, error) {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	cursor, err := Client.Database(db).Collection("polls").Find(ctx, map[string]interface{}{"open": true, "gatekeep": true})
 	if err != nil {
 		return nil, err
 
