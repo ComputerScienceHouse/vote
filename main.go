@@ -170,8 +170,7 @@ func main() {
 			poll.Options = []string{"Pass", "Fail", "Abstain"}
 		}
 		if poll.Gatekeep {
-			//TODO: invert-this!!
-			if slices.Contains(claims.UserInfo.Groups, "eboard-evaluations") {
+			if !slices.Contains(claims.UserInfo.Groups, "eboard-evaluations") {
 				c.HTML(403, "unauthorized.tmpl", gin.H{
 					"Username": claims.UserInfo.Username,
 					"FullName": claims.UserInfo.FullName,
