@@ -7,6 +7,7 @@ Implementation
 - **Server-side rendering**. That's right, this site (should) (mostly) work without JavaScript.
 - **Server Sent Events** for real-time vote results
 - **~~Limited~~ voting options**. It's now just as good as Google Forms, but a lot less safe! That's what you get when a bored college student does this in their free time
+- **Constitutional Vote Mode**. This is an exclusive feature to Evals. It ensures votes meet quorum, and then automatically close if they do. If they do not meet quorum, it DMs all people eligible to vote who have not.
 
 ## Configuration
 
