@@ -66,6 +66,7 @@ func (client *OIDCClient) getAccessToken() int {
 		logging.Logger.WithFields(logrus.Fields{"method": "setupOidcClient"}).Error(err)
 		return 0
 	}
+	defer resp.Body.Close()
 	respData := make(map[string]interface{})
 	err = json.NewDecoder(resp.Body).Decode(&respData)
 	if err != nil {
@@ -93,6 +94,7 @@ func (client *OIDCClient) GetActiveUsers() []OIDCUser {
 		logging.Logger.WithFields(logrus.Fields{"method": "GetAllUsers"}).Error(err)
 		return nil
 	}
+	defer resp.Body.Close()
 	ret := make([]OIDCUser, 0)
 	err = json.NewDecoder(resp.Body).Decode(&ret)
 	if err != nil {
@@ -119,6 +121,7 @@ func (client *OIDCClient) GetUserInfo(user *OIDCUser) {
 		logging.Logger.WithFields(logrus.Fields{"method": "GetUserInfo"}).Error(err)
 		return
 	}
+	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
 	if len(arg) > 0 {
 		thing := make([]map[string]interface{}, 0)
@@ -144,6 +147,7 @@ func (client *OIDCClient) GetUserGatekeep(user *OIDCUser) {
 		logging.Logger.WithFields(logrus.Fields{"method": "GetUserGatekeep"}).Error(err)
 		return
 	}
+	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
 	if strings.Contains(string(b), "Users") {
 		logging.Logger.WithFields(logrus.Fields{"method": "GetUserGatekeep"}).Error("Conditional Gatekeep token is incorrect")
