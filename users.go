@@ -124,9 +124,10 @@ func (client *OIDCClient) GetUserInfo(user *OIDCUser) {
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
 	if len(arg) > 0 {
-		thing := make([]map[string]interface{}, 0)
-		err = json.Unmarshal(b, &thing)
-		user.SlackUID = thing[0]["attributes"].(map[string]interface{})["slackuid"].([]interface{})[0].(string)
+		userData := make([]map[string]interface{}, 0)
+		err = json.Unmarshal(b, &userData)
+		// userdata attributes are a KV pair of string: []any, this casts attributes, finds the specific attribute, casts it to a list of any, and then pulls the first field since there will only ever be one
+		user.SlackUID = userData[0]["attributes"].(map[string]interface{})["slackuid"].([]interface{})[0].(string)
 	} else {
 		err = json.Unmarshal(b, &user)
 	}
