@@ -103,14 +103,14 @@ func EvaluatePolls() {
 		//Two-Thirds Quorum
 		voterCount := len(poll.AllowedUsers)
 		//fuckass rounding
-		quorum := int(math.Round(float64(voterCount) * 2.0 / 3.0))
+		quorum := int(math.Ceil(float64(voterCount) * 2.0 / 3.0))
 		notVoted := make([]*OIDCUser, 0)
 		// check all voters to see if they have voted
 		for _, user := range poll.AllowedUsers {
 			voted, err := database.HasVoted(ctx, poll.Id, user)
 			if err != nil {
 				logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls hasVoted"}).Error(err)
-				return
+				continue
 			}
 			if voted {
 				continue
@@ -129,17 +129,17 @@ func EvaluatePolls() {
 							"member of house and vote. \n"+pollLink+"\nThank you!", false))
 				if err != nil {
 					logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls dm"}).Error(err)
-					return
+					continue
 				}
 			}
-			return
+			continue
 		}
 		// we close the poll here
 		err = poll.Close(ctx)
 		fmt.Println("Time reached, closing poll " + poll.ShortDescription)
 		if err != nil {
 			logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls close"}).Error(err)
-			return
+			continue
 		}
 		_, _, _, err = slackData.Client.SendMessage(slackData.AnnouncementsChannel,
 			slack.MsgOptionText("The vote \""+poll.ShortDescription+"\" has closed. Check out the results at "+pollLink, false))
