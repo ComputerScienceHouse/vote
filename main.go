@@ -121,7 +121,7 @@ func main() {
 		c.HTML(200, "create.tmpl", gin.H{
 			"Username": claims.UserInfo.Username,
 			"FullName": claims.UserInfo.FullName,
-			"IsEvals":  containsString(claims.UserInfo.Groups, "eboard-evaluations"), // might need to be is evals
+			"IsEvals":  !containsString(claims.UserInfo.Groups, "eboard-evaluations"), // might need to be is evals
 		})
 	}))
 
@@ -136,6 +136,17 @@ func main() {
 			return
 		}
 
+		quorumType := c.PostForm("quorumType")
+		var quorum float64
+		switch quorumType {
+		case "12":
+			quorum = 1.0 / 2.0
+		case "23":
+			quorum = 2.0 / 3.0
+		default:
+			quorum = 1.0 / 2.0
+		}
+
 		poll := &database.Poll{
 			Id:               "",
 			CreatedBy:        claims.UserInfo.Username,
@@ -144,6 +155,7 @@ func main() {
 			VoteType:         database.POLL_TYPE_SIMPLE,
 			OpenedTime:       time.Now(),
 			Open:             true,
+			QuorumType:       quorum,
 			Hidden:           false,
 			Gatekeep:         c.PostForm("gatekeep") == "true",
 			AllowWriteIns:    c.PostForm("allowWriteIn") == "true",
@@ -170,7 +182,8 @@ func main() {
 			poll.Options = []string{"Pass", "Fail", "Abstain"}
 		}
 		if poll.Gatekeep {
-			if !slices.Contains(claims.UserInfo.Groups, "eboard-evaluations") {
+			//TODO UNDO THIS
+			if slices.Contains(claims.UserInfo.Groups, "eboard-evaluations") {
 				c.HTML(403, "unauthorized.tmpl", gin.H{
 					"Username": claims.UserInfo.Username,
 					"FullName": claims.UserInfo.FullName,

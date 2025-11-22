@@ -19,6 +19,7 @@ type Poll struct {
 	OpenedTime       time.Time `bson:"openedTime"`
 	Open             bool      `bson:"open"`
 	Gatekeep         bool      `bson:"gatekeep"`
+	QuorumType       float64   `bson:"quorumType"`
 	AllowedUsers     []string  `bson:"allowedUsers"`
 	Hidden           bool      `bson:"hidden"`
 	AllowWriteIns    bool      `bson:"writeins"`

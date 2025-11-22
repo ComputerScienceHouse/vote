@@ -77,6 +77,7 @@ func InitConstitution() {
 func GetEligibleVoters() []string {
 	ret := make([]string, 0)
 	allactive := oidcClient.GetActiveUsers()
+	//todo: figure out why this is slow as FORK
 	for _, a := range allactive {
 		oidcClient.GetUserGatekeep(&a)
 		if a.Gatekeep {
@@ -103,7 +104,7 @@ func EvaluatePolls() {
 		//Two-Thirds Quorum
 		voterCount := len(poll.AllowedUsers)
 		//fuckass rounding
-		quorum := int(math.Ceil(float64(voterCount) * 2.0 / 3.0))
+		quorum := int(math.Ceil(float64(voterCount) * poll.QuorumType))
 		notVoted := make([]*OIDCUser, 0)
 		votedCount := 0
 		// check all voters to see if they have voted
