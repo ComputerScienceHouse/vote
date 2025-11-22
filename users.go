@@ -68,6 +68,10 @@ func (client *OIDCClient) getAccessToken() int {
 		return 0
 	}
 	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		logging.Logger.WithFields(logrus.Fields{"method": "setupOidcClient", "statusCode": resp.StatusCode}).Error(resp.Status)
+		return 0
+	}
 	respData := make(map[string]interface{})
 	err = json.NewDecoder(resp.Body).Decode(&respData)
 	if err != nil {
