@@ -52,6 +52,10 @@ func InitConstitution() {
 	if nearestMidnight.Sub(time.Now()).Hours() > 23 {
 		nearestMidnight = nearestMidnight.Add(-24 * time.Hour)
 	}
+	// fuckass timezone stuff (:
+	if nearestMidnight.Sub(time.Now()).Hours() < 0 {
+		nearestMidnight = nearestMidnight.Add(24 * time.Hour)
+	}
 	fmt.Println(nearestMidnight)
 	fmt.Println(nearestMidnight.Sub(time.Now()))
 	ticker := time.NewTicker(nearestMidnight.Sub(time.Now()))
