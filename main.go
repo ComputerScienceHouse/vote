@@ -299,11 +299,12 @@ func main() {
 			}
 
 			maxNum := len(poll.Options)
-			voted := make([]bool, len(poll.Options))
+			voted := make([]bool, maxNum)
 
 			for _, opt := range poll.Options {
-				rank, err := strconv.Atoi(c.PostForm(opt))
-				if err != nil {
+				option := c.PostForm(opt)
+				rank, err := strconv.Atoi(option)
+				if err != nil && len(option) > 0 {
 					c.JSON(400, gin.H{"error": "non-number ranking"})
 					return
 				}
