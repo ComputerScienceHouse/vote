@@ -304,7 +304,7 @@ func main() {
 			for _, opt := range poll.Options {
 				option := c.PostForm(opt)
 				rank, err := strconv.Atoi(option)
-				if len(option) < 0 {
+				if len(option) < 1 {
 					continue
 				}
 				if err != nil {
