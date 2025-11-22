@@ -105,6 +105,11 @@ func EvaluatePolls() {
 		notVoted := make([]*OIDCUser, 0)
 		votedCount := 0
 		// check all voters to see if they have voted
+		if poll.AllowedUsers == nil {
+			logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls checkQuorum"}).Error(
+				"Users allowed to vote is nil for \"" + poll.ShortDescription + "\" !! This should not happen!!")
+			continue
+		}
 		for _, user := range poll.AllowedUsers {
 			voted, err := database.HasVoted(ctx, poll.Id, user)
 			if err != nil {
