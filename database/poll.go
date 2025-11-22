@@ -102,11 +102,13 @@ func GetOpenPolls(ctx context.Context) ([]*Poll, error) {
 	cursor, err := Client.Database(db).Collection("polls").Find(ctx, map[string]interface{}{"open": true})
 	if err != nil {
 		return nil, err
-
 	}
 
 	var polls []*Poll
-	cursor.All(ctx, &polls)
+	err = cursor.All(ctx, &polls)
+	if err != nil {
+		return nil, err
+	}
 
 	return polls, nil
 }
