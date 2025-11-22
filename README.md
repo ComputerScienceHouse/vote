@@ -31,5 +31,6 @@ VOTE_SLACK_BOT_TOKEN=
 
 - [ ] Don't let the user fuck it up
 - [ ] Show E-Board polls with a higher priority
+- [ ] Move Hide Vote to create instead of after you vote :skull:
 - [ ] Display the reason why a user is on the results page of a running poll
 - [ ] Display minimum time left that a poll is open
