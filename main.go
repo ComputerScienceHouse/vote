@@ -121,7 +121,7 @@ func main() {
 		c.HTML(200, "create.tmpl", gin.H{
 			"Username": claims.UserInfo.Username,
 			"FullName": claims.UserInfo.FullName,
-			"IsEvals":  !containsString(claims.UserInfo.Groups, "eboard-evaluations"), // might need to be is evals
+			"IsEvals":  containsString(claims.UserInfo.Groups, "eboard-evaluations"),
 		})
 	}))
 
@@ -182,8 +182,7 @@ func main() {
 			poll.Options = []string{"Pass", "Fail", "Abstain"}
 		}
 		if poll.Gatekeep {
-			//TODO UNDO THIS
-			if slices.Contains(claims.UserInfo.Groups, "eboard-evaluations") {
+			if !slices.Contains(claims.UserInfo.Groups, "eboard-evaluations") {
 				c.HTML(403, "unauthorized.tmpl", gin.H{
 					"Username": claims.UserInfo.Username,
 					"FullName": claims.UserInfo.FullName,
