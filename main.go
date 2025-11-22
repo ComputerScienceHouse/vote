@@ -319,9 +319,10 @@ func main() {
 					return
 				}
 			}
-			for num, voteOpt := range voted {
-				if !voteOpt {
-					c.JSON(400, gin.H{"error": fmt.Sprintf("no candidate ranked at #%d", num+1)})
+			rankedCandidates := len(vote.Options)
+			for _, voteOpt := range vote.Options {
+				if voteOpt > rankedCandidates {
+					c.JSON(400, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
 					return
 				}
 			}
