@@ -45,7 +45,8 @@ func (client *OIDCClient) setupOidcClient(oidcClientId, oidcClientSecret string)
 		for {
 			select {
 			case <-ticker.C:
-				client.getAccessToken()
+				exp = client.getAccessToken()
+				ticker.Reset(time.Duration(exp) * time.Second)
 			case <-client.quit:
 				ticker.Stop()
 				return
