@@ -79,12 +79,28 @@
               name="gatekeep"
               id="gatekeep"
               value="true"
-              checked
               onchange="onGatekeepChange()"
             >
             <span> Gatekeep Required</span>
         </div>
-        <div id="waivedUsers" class="form-group">
+        <div id="quorumTypeGroup" class="form-group" style="display:none">
+            <span>Quorum Type</span>
+            <input
+              type="radio"
+              name="quorumType"
+              id="quorumType"
+              value="12"
+            >
+            <span> One-Half</span>
+            <input
+              type="radio"
+              name="quorumType"
+              id="quorumType"
+              value="23"
+            >
+            <span> Two-Thirds</span>
+        </div>
+        <div id="waivedUsers" class="form-group" style="display:none">
           <input
             type="text"
             name="waivedUsers"
@@ -107,10 +123,13 @@
       function onGatekeepChange(){
         const gatekeepBox = document.getElementById("gatekeep");
         const waivedUsers = document.getElementById("waivedUsers");
+        const quorumType = document.getElementById("quorumTypeGroup");
         if (gatekeepBox.checked){
-          document.getElementById("waivedUsers").style.display = null
+          waivedUsers.style.display = null
+            quorumType.style.display = null
         } else {
-          document.getElementById("waivedUsers").style.display = "none"
+          waivedUsers.style.display = "none"
+          quorumType.style.display = "none"
         }
       }
     </script>
