@@ -46,19 +46,12 @@ func InitConstitution() {
 
 	api := slack.New(botToken, slack.OptionAppLevelToken(appToken))
 	slackData.Client = socketmode.New(api)
-	_, offset := time.Now().Zone()
-	// the fact that we needed to do this offset calculation is SO stupid but whatever. Truncate should be local to timezone
-	nearestMidnight := time.Now().Truncate(24*time.Hour).AddDate(0, 0, 1).Add(time.Duration(offset*-1) * time.Second)
-	if nearestMidnight.Sub(time.Now()).Hours() > 23 {
-		nearestMidnight = nearestMidnight.Add(-24 * time.Hour)
-	}
-	// fuckass timezone stuff (:
-	if nearestMidnight.Sub(time.Now()).Hours() < 0 {
-		nearestMidnight = nearestMidnight.Add(24 * time.Hour)
-	}
-	fmt.Println(nearestMidnight)
-	fmt.Println(nearestMidnight.Sub(time.Now()))
-	ticker := time.NewTicker(nearestMidnight.Sub(time.Now()))
+	t := time.Now()
+	startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
+	nextMidnight := startOfDay.AddDate(0, 0, 1)
+	fmt.Println(nextMidnight)
+	fmt.Println(nextMidnight.Sub(time.Now()))
+	ticker := time.NewTicker(nextMidnight.Sub(time.Now()))
 	first := true
 	go func() {
 		for {
