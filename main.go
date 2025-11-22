@@ -299,10 +299,14 @@ func main() {
 			}
 
 			maxNum := len(poll.Options)
-			voted := make([]bool, len(poll.Options))
+			voted := make([]bool, maxNum)
 
 			for _, opt := range poll.Options {
-				rank, err := strconv.Atoi(c.PostForm(opt))
+				option := c.PostForm(opt)
+				rank, err := strconv.Atoi(option)
+				if len(option) < 1 {
+					continue
+				}
 				if err != nil {
 					c.JSON(400, gin.H{"error": "non-number ranking"})
 					return
@@ -315,9 +319,10 @@ func main() {
 					return
 				}
 			}
-			for num, voteOpt := range voted {
-				if !voteOpt {
-					c.JSON(400, gin.H{"error": fmt.Sprintf("no candidate ranked at #%d", num+1)})
+			rankedCandidates := len(vote.Options)
+			for _, voteOpt := range vote.Options {
+				if voteOpt > rankedCandidates {
+					c.JSON(400, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
 					return
 				}
 			}
