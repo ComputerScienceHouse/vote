@@ -298,14 +298,10 @@ func main() {
 				UserId: claims.UserInfo.Username,
 			}
 
+			maxNum := len(poll.Options)
 			voted := make([]bool, len(poll.Options))
-			maxNum := len(vote.Options)
 
 			for _, opt := range poll.Options {
-				if c.PostForm(opt) == "" {
-					c.JSON(400, gin.H{"error": "did not fill out all rankings"})
-					return
-				}
 				rank, err := strconv.Atoi(c.PostForm(opt))
 				if err != nil {
 					c.JSON(400, gin.H{"error": "non-number ranking"})
