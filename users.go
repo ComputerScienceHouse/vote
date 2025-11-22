@@ -128,6 +128,10 @@ func (client *OIDCClient) GetUserInfo(user *OIDCUser) {
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
+	if strings.Contains(string(b), "error") {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetUserInfo"}).Error(string(b))
+		return
+	}
 	if len(arg) > 0 {
 		userData := make([]map[string]interface{}, 0)
 		err = json.Unmarshal(b, &userData)
