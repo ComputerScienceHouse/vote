@@ -149,6 +149,7 @@ func (client *OIDCClient) GetUserGatekeep(user *OIDCUser) {
 	htclient := &http.Client{}
 	req, err := http.NewRequest("GET", CONDITIONAL_GATEKEEP_URL+user.Username, nil)
 	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetUserGatekeep"}).Error(err)
 		return
 	}
 	req.Header.Add("X-VOTE-TOKEN", VOTE_TOKEN)

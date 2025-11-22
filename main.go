@@ -300,6 +300,26 @@ func main() {
 
 			maxNum := len(poll.Options)
 			voted := make([]bool, maxNum)
+			// process write-in
+			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
+				for candidate := range vote.Options {
+					if strings.EqualFold(candidate, strings.TrimSpace(c.PostForm("writeinOption"))) {
+						c.JSON(500, gin.H{"error": "Write-in is already an option"})
+						return
+					}
+				}
+				rank, err := strconv.Atoi(c.PostForm("writein"))
+				if err != nil {
+					c.JSON(500, gin.H{"error": "Write-in rank is not numerical"})
+					return
+				}
+				if rank < 1 {
+					c.JSON(500, gin.H{"error": "Write-in rank is not positive"})
+					return
+				}
+				vote.Options[c.PostForm("writeinOption")] = rank
+				maxNum += 1 //you can rank all options in the poll PLUS one
+			}
 
 			for _, opt := range poll.Options {
 				option := c.PostForm(opt)
@@ -324,21 +344,6 @@ func main() {
 				if voteOpt > rankedCandidates {
 					c.JSON(400, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
 					return
-				}
-			}
-			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
-				for candidate := range vote.Options {
-					if strings.EqualFold(candidate, strings.TrimSpace(c.PostForm("writeinOption"))) {
-						c.JSON(500, gin.H{"error": "write-in is already an option"})
-						return
-					}
-				}
-				rank, err := strconv.Atoi(c.PostForm("writein"))
-				if err != nil {
-					c.JSON(500, gin.H{"error": "error parsing votes"})
-				}
-				if rank > 0 {
-					vote.Options[c.PostForm("writeinOption")] = rank
 				}
 			}
 			database.CastRankedVote(c, &vote, &voter)
