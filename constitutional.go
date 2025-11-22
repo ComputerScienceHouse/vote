@@ -105,6 +105,7 @@ func EvaluatePolls() {
 		//fuckass rounding
 		quorum := int(math.Ceil(float64(voterCount) * 2.0 / 3.0))
 		notVoted := make([]*OIDCUser, 0)
+		votedCount := 0
 		// check all voters to see if they have voted
 		for _, user := range poll.AllowedUsers {
 			voted, err := database.HasVoted(ctx, poll.Id, user)
@@ -113,13 +114,14 @@ func EvaluatePolls() {
 				continue
 			}
 			if voted {
+				votedCount = votedCount + 1
 				continue
 			}
 			notVoted = append(notVoted, &OIDCUser{Username: user})
 		}
 		pollLink := VOTE_HOST + "/poll/" + poll.Id
 		// quorum not met
-		if len(notVoted) > (voterCount - quorum) {
+		if votedCount < quorum {
 			for _, user := range notVoted {
 				oidcClient.GetUserInfo(user)
 				_, _, err = slackData.Client.PostMessage(user.SlackUID,
