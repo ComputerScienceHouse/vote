@@ -315,9 +315,6 @@ func main() {
 				vote.Options[option] = optionRank
 			}
 
-			maxNum := len(vote.Options)
-			voted := make([]bool, maxNum)
-
 			// process write-in
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				for candidate := range vote.Options {
@@ -338,7 +335,10 @@ func main() {
 				vote.Options[c.PostForm("writeinOption")] = rank
 			}
 
-			for rank := range poll.Options {
+			maxNum := len(vote.Options)
+			voted := make([]bool, maxNum)
+
+			for _, rank := range vote.Options {
 				if rank > 0 && rank <= maxNum {
 					if voted[rank-1] {
 						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level."})
