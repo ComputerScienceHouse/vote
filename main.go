@@ -299,7 +299,6 @@ func main() {
 			}
 
 			maxNum := len(poll.Options)
-			voted := make([]bool, maxNum)
 			// process write-in
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				for candidate := range vote.Options {
@@ -320,6 +319,8 @@ func main() {
 				vote.Options[c.PostForm("writeinOption")] = rank
 				maxNum += 1 //you can rank all options in the poll PLUS one
 			}
+
+			voted := make([]bool, maxNum)
 
 			for _, opt := range poll.Options {
 				option := c.PostForm(opt)
