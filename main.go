@@ -342,7 +342,7 @@ func main() {
 			for _, rank := range vote.Options {
 				if rank > 0 && rank <= maxNum {
 					if voted[rank-1] {
-						c.JSON(400, gin.H{"error": "You ranked two or more candidates at the same level."})
+						c.JSON(400, gin.H{"error": "You ranked two or more candidates at the same level"})
 						return
 					}
 					voted[rank-1] = true
