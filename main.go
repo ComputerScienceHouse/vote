@@ -298,7 +298,26 @@ func main() {
 				UserId: claims.UserInfo.Username,
 			}
 
-			maxNum := len(poll.Options)
+			fmt.Println(poll.Options)
+
+			for _, option := range poll.Options {
+				optionRankStr := c.PostForm(option)
+				optionRank, err := strconv.Atoi(optionRankStr)
+
+				if len(optionRankStr) < 1 {
+					continue
+				}
+				if err != nil {
+					c.JSON(400, gin.H{"error": "non-number ranking"})
+					return
+				}
+
+				vote.Options[option] = optionRank
+			}
+
+			maxNum := len(vote.Options)
+			voted := make([]bool, maxNum)
+
 			// process write-in
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				for candidate := range vote.Options {
@@ -317,33 +336,21 @@ func main() {
 					return
 				}
 				vote.Options[c.PostForm("writeinOption")] = rank
-				maxNum += 1 //you can rank all options in the poll PLUS one
 			}
 
-			voted := make([]bool, maxNum)
-
-			for _, opt := range poll.Options {
-				option := c.PostForm(opt)
-				rank, err := strconv.Atoi(option)
-				if len(option) < 1 {
-					continue
-				}
-				if err != nil {
-					c.JSON(400, gin.H{"error": "non-number ranking"})
-					return
-				}
+			for rank, _ := range poll.Options {
 				if rank > 0 && rank <= maxNum {
 					if voted[rank-1] {
 						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level."})
 						return
 					}
-					vote.Options[opt] = rank
 					voted[rank-1] = true
 				} else {
 					c.JSON(400, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", maxNum)})
 					return
 				}
 			}
+
 			rankedCandidates := len(vote.Options)
 			for _, voteOpt := range vote.Options {
 				if voteOpt > rankedCandidates {
