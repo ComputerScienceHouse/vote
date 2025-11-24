@@ -333,6 +333,10 @@ func main() {
 					return
 				}
 				if rank > 0 && rank <= maxNum {
+					if voted[rank-1] {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level."})
+						return
+					}
 					vote.Options[opt] = rank
 					voted[rank-1] = true
 				} else {
