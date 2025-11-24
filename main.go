@@ -67,6 +67,7 @@ func main() {
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
 
+	// TODO: change ALL the response codes to use http.(actual description) 
 	r.GET("/", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
@@ -341,7 +342,7 @@ func main() {
 			for _, rank := range vote.Options {
 				if rank > 0 && rank <= maxNum {
 					if voted[rank-1] {
-						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level."})
+						c.JSON(400, gin.H{"error": "You ranked two or more candidates at the same level."})
 						return
 					}
 					voted[rank-1] = true
