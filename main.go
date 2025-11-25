@@ -67,6 +67,7 @@ func main() {
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
 
+	// TODO: change ALL the response codes to use http.(actual description) 
 	r.GET("/", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
@@ -298,7 +299,23 @@ func main() {
 				UserId: claims.UserInfo.Username,
 			}
 
-			maxNum := len(poll.Options)
+			fmt.Println(poll.Options)
+
+			for _, option := range poll.Options {
+				optionRankStr := c.PostForm(option)
+				optionRank, err := strconv.Atoi(optionRankStr)
+
+				if len(optionRankStr) < 1 {
+					continue
+				}
+				if err != nil {
+					c.JSON(400, gin.H{"error": "non-number ranking"})
+					return
+				}
+
+				vote.Options[option] = optionRank
+			}
+
 			// process write-in
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				for candidate := range vote.Options {
@@ -317,29 +334,24 @@ func main() {
 					return
 				}
 				vote.Options[c.PostForm("writeinOption")] = rank
-				maxNum += 1 //you can rank all options in the poll PLUS one
 			}
 
+			maxNum := len(vote.Options)
 			voted := make([]bool, maxNum)
 
-			for _, opt := range poll.Options {
-				option := c.PostForm(opt)
-				rank, err := strconv.Atoi(option)
-				if len(option) < 1 {
-					continue
-				}
-				if err != nil {
-					c.JSON(400, gin.H{"error": "non-number ranking"})
-					return
-				}
+			for _, rank := range vote.Options {
 				if rank > 0 && rank <= maxNum {
-					vote.Options[opt] = rank
+					if voted[rank-1] {
+						c.JSON(400, gin.H{"error": "You ranked two or more candidates at the same level"})
+						return
+					}
 					voted[rank-1] = true
 				} else {
 					c.JSON(400, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", maxNum)})
 					return
 				}
 			}
+
 			rankedCandidates := len(vote.Options)
 			for _, voteOpt := range vote.Options {
 				if voteOpt > rankedCandidates {
