@@ -27,6 +27,17 @@ VOTE_SLACK_APP_TOKEN=
 VOTE_SLACK_BOT_TOKEN=
 ```
 
+## Linting
+These will be checked by CI
+
+```
+# tidy dependencies
+go mod tidy
+
+# format all code according to go standards
+gofmt -w -s *.go logging sse database
+```
+
 ## To-Dos
 
 - [ ] Don't let the user fuck it up
