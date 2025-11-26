@@ -11,7 +11,9 @@ Implementation
 
 ## Configuration
 
-You'll need to set up these values in your environment. Ask an RTP for OIDC credentials. A docker-compose file is provided for convenience. Otherwise, I trust you to figure it out!
+If you're using the compose file, you'll need to ask an RTP for the vote-dev OIDC secret, and set it as `VOTE_OIDC_SECRET` in your environment
+
+If you're not using the compose file, you'll need more of these
 
 ```
 VOTE_HOST=http://localhost:8080
