@@ -13,7 +13,6 @@ type RankedVote struct {
 	Options map[string]int     `bson:"options"`
 }
 
-
 func CastRankedVote(ctx context.Context, vote *RankedVote, voter *Voter) error {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
