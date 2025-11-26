@@ -1,4 +1,4 @@
-name: Golang Linting
+name: Golang Validation
 
 on:
   push:
@@ -29,3 +29,6 @@ jobs:
       - name: Check Format
         run: |
           gofmt -s -l database logging sse *.go
+      - name: Run Tests
+        run: |
+          go test ./database
