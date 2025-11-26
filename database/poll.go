@@ -305,6 +305,7 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 				// if any particular entry is above half remaining votes, they win and it ends
 				if val > (voteCount / 2) {
 					finalResult = append(finalResult, map[string]int{str: val})
+					end = true
 					break
 				}
 				// Check if all values in tallied are the same
