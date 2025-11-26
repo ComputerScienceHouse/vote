@@ -26,6 +26,7 @@ import (
 var VOTE_TOKEN = os.Getenv("VOTE_TOKEN")
 var CONDITIONAL_GATEKEEP_URL = os.Getenv("VOTE_CONDITIONAL_URL")
 var VOTE_HOST = os.Getenv("VOTE_HOST")
+var DEV_DISABLE_ACTIVE_FILTERS bool = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "true"
 
 func inc(x int) string {
 	return strconv.Itoa(x + 1)
@@ -111,7 +112,7 @@ func main() {
 	r.GET("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !slices.Contains(claims.UserInfo.Groups, "active") {
+		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -129,7 +130,7 @@ func main() {
 	r.POST("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !slices.Contains(claims.UserInfo.Groups, "active") {
+		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -551,7 +552,7 @@ func main() {
 // TODO: use the return value to influence messages shown on results page
 func canVote(user cshAuth.CSHUserInfo, poll database.Poll, allowedUsers []string) int {
 	// always false if user is not active
-	if !slices.Contains(user.Groups, "active") {
+	if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(user.Groups, "active") {
 		return 3
 	}
 	voted, err := database.HasVoted(context.Background(), poll.Id, user.Username)
