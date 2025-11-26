@@ -67,7 +67,7 @@ func main() {
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
 
-	// TODO: change ALL the response codes to use http.(actual description) 
+	// TODO: change ALL the response codes to use http.(actual description)
 	r.GET("/", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
