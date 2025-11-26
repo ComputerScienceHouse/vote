@@ -42,6 +42,9 @@ go mod tidy
 
 # format all code according to go standards
 gofmt -w -s *.go logging sse database
+
+# run tests (database is the first place we've defined tests)
+go test ./database
 ```
 
 ## To-Dos
