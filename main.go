@@ -26,7 +26,10 @@ import (
 var VOTE_TOKEN = os.Getenv("VOTE_TOKEN")
 var CONDITIONAL_GATEKEEP_URL = os.Getenv("VOTE_CONDITIONAL_URL")
 var VOTE_HOST = os.Getenv("VOTE_HOST")
+
+// Dev mode flags
 var DEV_DISABLE_ACTIVE_FILTERS bool = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "true"
+var DEV_FORCE_IS_EVALS bool = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
 
 func inc(x int) string {
 	return strconv.Itoa(x + 1)
@@ -123,7 +126,7 @@ func main() {
 		c.HTML(200, "create.tmpl", gin.H{
 			"Username": claims.UserInfo.Username,
 			"FullName": claims.UserInfo.FullName,
-			"IsEvals":  containsString(claims.UserInfo.Groups, "eboard-evaluations"),
+			"IsEvals":  isEvals(claims.UserInfo),
 		})
 	}))
 
@@ -184,7 +187,7 @@ func main() {
 			poll.Options = []string{"Pass", "Fail", "Abstain"}
 		}
 		if poll.Gatekeep {
-			if !slices.Contains(claims.UserInfo.Groups, "eboard-evaluations") {
+			if !isEvals(claims.UserInfo) {
 				c.HTML(403, "unauthorized.tmpl", gin.H{
 					"Username": claims.UserInfo.Username,
 					"FullName": claims.UserInfo.FullName,
@@ -501,6 +504,11 @@ func main() {
 	go broker.Listen()
 
 	r.Run()
+}
+
+// isEvals determines if the current user is evals, allowing for a dev mode override
+func isEvals(user cshAuth.CSHUserInfo) bool {
+	return DEV_FORCE_IS_EVALS || containsString(user.Groups, "eboard-evaluations")
 }
 
 // canVote determines whether a user can cast a vote.
