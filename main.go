@@ -157,9 +157,9 @@ func main() {
 			OpenedTime:       time.Now(),
 			Open:             true,
 			QuorumType:       quorum,
-			Hidden:           false,
 			Gatekeep:         c.PostForm("gatekeep") == "true",
 			AllowWriteIns:    c.PostForm("allowWriteIn") == "true",
+			Hidden:           c.PostForm("hidden") == "true",
 		}
 		if c.PostForm("rankedChoice") == "true" {
 			poll.VoteType = database.POLL_TYPE_RANKED
@@ -389,14 +389,6 @@ func main() {
 		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-
-		if poll.Hidden && poll.CreatedBy != claims.UserInfo.Username {
-			c.HTML(403, "hidden.tmpl", gin.H{
-				"Username": claims.UserInfo.Username,
-				"FullName": claims.UserInfo.FullName,
-			})
 			return
 		}
 
