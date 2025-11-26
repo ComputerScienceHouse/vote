@@ -4,9 +4,12 @@ import (
 	"context"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+
+	"github.com/computersciencehouse/vote/logging"
 )
 
 type Poll struct {
@@ -178,6 +181,88 @@ func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
 	return polls, nil
 }
 
+func calculateRankedResult(votesRaw []RankedVote) ([]map[string]int, error) {
+	// We want to store those that were eliminated
+	eliminated := make([]string, 0)
+	votes := make([][]string, 0)
+	finalResult := make([]map[string]int, 0)
+
+	//change ranked votes from a map (which is unordered) to a slice of votes (which is ordered)
+	//order is from first preference to last preference
+	for _, vote := range votesRaw {
+		temp, cf := context.WithTimeout(context.Background(), 1*time.Second)
+		optionList := orderOptions(vote.Options, temp)
+		cf()
+		votes = append(votes, optionList)
+	}
+
+	round := 0
+	// Iterate until we have a winner
+	for {
+		round = round + 1
+		// Contains candidates to number of votes in this round
+		tallied := make(map[string]int)
+		voteCount := 0
+		for _, picks := range votes {
+			// Go over picks until we find a non-eliminated candidate
+			for _, candidate := range picks {
+				if !containsValue(eliminated, candidate) {
+					if _, ok := tallied[candidate]; ok {
+						tallied[candidate]++
+					} else {
+						tallied[candidate] = 1
+					}
+					voteCount += 1
+					break
+				}
+			}
+		}
+		// Eliminate lowest vote getter
+		minVote := 1000000             //the smallest number of votes received thus far (to find who is in last)
+		minPerson := make([]string, 0) //the person(s) with the least votes that need removed
+		for person, vote := range tallied {
+			if vote < minVote { // this should always be true round one, to set a true "who is in last"
+				minVote = vote
+				minPerson = make([]string, 0)
+				minPerson = append(minPerson, person)
+			} else if vote == minVote {
+				minPerson = append(minPerson, person)
+			}
+		}
+		eliminated = append(eliminated, minPerson...)
+		finalResult = append(finalResult, tallied)
+
+		// TODO this should probably include some poll identifier
+		logging.Logger.WithFields(logrus.Fields{"round": round, "tallies": tallied, "threshold": voteCount / 2}).Debug("round report")
+
+		// If one person has all the votes, they win
+		if len(tallied) == 1 {
+			break
+		}
+
+		end := true
+		for str, val := range tallied {
+			// if any particular entry is above half remaining votes, they win and it ends
+			if val > (voteCount / 2) {
+				finalResult = append(finalResult, map[string]int{str: val})
+				end = true
+				break
+			}
+			// Check if all values in tallied are the same
+			// In that case, it's a tie?
+			if val != minVote {
+				end = false
+				break
+			}
+		}
+		if end {
+			break
+		}
+	}
+	return finalResult, nil
+
+}
+
 func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
@@ -223,9 +308,6 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		return finalResult, nil
 
 	case POLL_TYPE_RANKED:
-		// We want to store those that were eliminated
-		eliminated := make([]string, 0)
-
 		// Get all votes
 		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 			{{
@@ -239,76 +321,7 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		}
 		var votesRaw []RankedVote
 		cursor.All(ctx, &votesRaw)
-
-		votes := make([][]string, 0)
-
-		//change ranked votes from a map (which is unordered) to a slice of votes (which is ordered)
-		//order is from first preference to last preference
-		for _, vote := range votesRaw {
-			temp, cf := context.WithTimeout(context.Background(), 1*time.Second)
-			optionList := orderOptions(vote.Options, temp)
-			cf()
-			votes = append(votes, optionList)
-		}
-
-		// Iterate until we have a winner
-		for {
-			// Contains candidates to number of votes in this round
-			tallied := make(map[string]int)
-			voteCount := 0
-			for _, picks := range votes {
-				// Go over picks until we find a non-eliminated candidate
-				for _, candidate := range picks {
-					if !containsValue(eliminated, candidate) {
-						if _, ok := tallied[candidate]; ok {
-							tallied[candidate]++
-						} else {
-							tallied[candidate] = 1
-						}
-						voteCount += 1
-						break
-					}
-				}
-			}
-			// Eliminate lowest vote getter
-			minVote := 1000000             //the smallest number of votes received thus far (to find who is in last)
-			minPerson := make([]string, 0) //the person(s) with the least votes that need removed
-			for person, vote := range tallied {
-				if vote < minVote { // this should always be true round one, to set a true "who is in last"
-					minVote = vote
-					minPerson = make([]string, 0)
-					minPerson = append(minPerson, person)
-				} else if vote == minVote {
-					minPerson = append(minPerson, person)
-				}
-			}
-			eliminated = append(eliminated, minPerson...)
-			finalResult = append(finalResult, tallied)
-			// If one person has all the votes, they win
-			if len(tallied) == 1 {
-				break
-			}
-
-			end := true
-			for str, val := range tallied {
-				// if any particular entry is above half remaining votes, they win and it ends
-				if val > (voteCount / 2) {
-					finalResult = append(finalResult, map[string]int{str: val})
-					end = true
-					break
-				}
-				// Check if all values in tallied are the same
-				// In that case, it's a tie?
-				if val != minVote {
-					end = false
-					break
-				}
-			}
-			if end {
-				break
-			}
-		}
-		return finalResult, nil
+		return calculateRankedResult(votesRaw)
 	}
 	return nil, nil
 }
