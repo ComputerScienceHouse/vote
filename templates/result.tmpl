@@ -52,13 +52,6 @@
         {{ end }}
       </div>
       {{ end }}
-      {{ if and (.CanModify) (.IsHidden) }}
-      <br />
-      <br />
-      <form action="/poll/{{ .Id }}/reveal" method="POST">
-        <button type="submit" class="btn btn-success">Reveal Votes</button>
-      </form>
-      {{ end }}
       {{ if and (.CanModify) (not .IsHidden) }}
       <br />
       <br />
