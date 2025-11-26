@@ -29,6 +29,8 @@ VOTE_SLACK_APP_TOKEN=
 VOTE_SLACK_BOT_TOKEN=
 ```
 
+You can also set `DEV_DISABLE_ACTIVE_FILTERS="true"` to disable the requirements that you be active
+
 ## Linting
 These will be checked by CI
 
