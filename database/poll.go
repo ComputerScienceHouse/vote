@@ -312,7 +312,6 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 				// In that case, it's a tie?
 				if val != minVote {
 					end = false
-					break
 				}
 			}
 			if end {
