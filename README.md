@@ -29,7 +29,9 @@ VOTE_SLACK_APP_TOKEN=
 VOTE_SLACK_BOT_TOKEN=
 ```
 
-You can also set `DEV_DISABLE_ACTIVE_FILTERS="true"` to disable the requirements that you be active
+### Dev Overrides
+`DEV_DISABLE_ACTIVE_FILTERS="true"` will disable the requirements that you be active to vote
+`DEV_FORCE_IS_EVALS="true"` will force vote to treat all users as the Evals director
 
 ## Linting
 These will be checked by CI
