@@ -230,9 +230,6 @@ func main() {
 		}
 
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
-		if poll.Gatekeep {
-			canModify = false
-		}
 
 		c.HTML(200, "poll.tmpl", gin.H{
 			"Id":               poll.Id,
@@ -400,9 +397,6 @@ func main() {
 		}
 
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
-		if poll.Gatekeep {
-			canModify = false
-		}
 
 		c.HTML(200, "result.tmpl", gin.H{
 			"Id":               poll.Id,
@@ -445,43 +439,6 @@ func main() {
 			Date:   primitive.NewDateTimeFromTime(time.Now()),
 			User:   claims.UserInfo.Username,
 			Action: "Hide Results",
-		}
-		err = database.WriteAction(c, &action)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.Redirect(302, "/results/"+poll.Id)
-	}))
-
-	r.POST("/poll/:id/reveal", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-
-		poll, err := database.GetPoll(c, c.Param("id"))
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-
-		if poll.CreatedBy != claims.UserInfo.Username {
-			c.JSON(403, gin.H{"error": "Only the creator can reveal a poll result"})
-			return
-		}
-
-		err = poll.Reveal(c)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		pId, _ := primitive.ObjectIDFromHex(poll.Id)
-		action := database.Action{
-			Id:     "",
-			PollId: pId,
-			Date:   primitive.NewDateTimeFromTime(time.Now()),
-			User:   claims.UserInfo.Username,
-			Action: "Reveal Results",
 		}
 		err = database.WriteAction(c, &action)
 		if err != nil {
