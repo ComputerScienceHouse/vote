@@ -412,6 +412,7 @@ func main() {
 			"CanModify":        canModify,
 			"Username":         claims.UserInfo.Username,
 			"FullName":         claims.UserInfo.FullName,
+			"Gatekeep":         poll.Gatekeep,
 		})
 	}))
 
