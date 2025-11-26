@@ -27,6 +27,10 @@ var VOTE_TOKEN = os.Getenv("VOTE_TOKEN")
 var CONDITIONAL_GATEKEEP_URL = os.Getenv("VOTE_CONDITIONAL_URL")
 var VOTE_HOST = os.Getenv("VOTE_HOST")
 
+// Dev mode flags
+var DEV_DISABLE_ACTIVE_FILTERS bool = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "true"
+var DEV_FORCE_IS_EVALS bool = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
+
 func inc(x int) string {
 	return strconv.Itoa(x + 1)
 }
@@ -67,7 +71,7 @@ func main() {
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
 
-	// TODO: change ALL the response codes to use http.(actual description) 
+	// TODO: change ALL the response codes to use http.(actual description)
 	r.GET("/", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
@@ -111,7 +115,7 @@ func main() {
 	r.GET("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !slices.Contains(claims.UserInfo.Groups, "active") {
+		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -122,14 +126,14 @@ func main() {
 		c.HTML(200, "create.tmpl", gin.H{
 			"Username": claims.UserInfo.Username,
 			"FullName": claims.UserInfo.FullName,
-			"IsEvals":  containsString(claims.UserInfo.Groups, "eboard-evaluations"),
+			"IsEvals":  isEvals(claims.UserInfo),
 		})
 	}))
 
 	r.POST("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
-		if !slices.Contains(claims.UserInfo.Groups, "active") {
+		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
 			c.HTML(403, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
@@ -157,9 +161,9 @@ func main() {
 			OpenedTime:       time.Now(),
 			Open:             true,
 			QuorumType:       quorum,
-			Hidden:           false,
 			Gatekeep:         c.PostForm("gatekeep") == "true",
 			AllowWriteIns:    c.PostForm("allowWriteIn") == "true",
+			Hidden:           c.PostForm("hidden") == "true",
 		}
 		if c.PostForm("rankedChoice") == "true" {
 			poll.VoteType = database.POLL_TYPE_RANKED
@@ -183,7 +187,7 @@ func main() {
 			poll.Options = []string{"Pass", "Fail", "Abstain"}
 		}
 		if poll.Gatekeep {
-			if !slices.Contains(claims.UserInfo.Groups, "eboard-evaluations") {
+			if !isEvals(claims.UserInfo) {
 				c.HTML(403, "unauthorized.tmpl", gin.H{
 					"Username": claims.UserInfo.Username,
 					"FullName": claims.UserInfo.FullName,
@@ -229,9 +233,6 @@ func main() {
 		}
 
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
-		if poll.Gatekeep {
-			canModify = false
-		}
 
 		c.HTML(200, "poll.tmpl", gin.H{
 			"Id":               poll.Id,
@@ -392,14 +393,6 @@ func main() {
 			return
 		}
 
-		if poll.Hidden && poll.CreatedBy != claims.UserInfo.Username {
-			c.HTML(403, "hidden.tmpl", gin.H{
-				"Username": claims.UserInfo.Username,
-				"FullName": claims.UserInfo.FullName,
-			})
-			return
-		}
-
 		results, err := poll.GetResult(c)
 		if err != nil {
 			c.JSON(500, gin.H{"error": err.Error()})
@@ -407,9 +400,6 @@ func main() {
 		}
 
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
-		if poll.Gatekeep {
-			canModify = false
-		}
 
 		c.HTML(200, "result.tmpl", gin.H{
 			"Id":               poll.Id,
@@ -422,6 +412,7 @@ func main() {
 			"CanModify":        canModify,
 			"Username":         claims.UserInfo.Username,
 			"FullName":         claims.UserInfo.FullName,
+			"Gatekeep":         poll.Gatekeep,
 		})
 	}))
 
@@ -452,43 +443,6 @@ func main() {
 			Date:   primitive.NewDateTimeFromTime(time.Now()),
 			User:   claims.UserInfo.Username,
 			Action: "Hide Results",
-		}
-		err = database.WriteAction(c, &action)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.Redirect(302, "/results/"+poll.Id)
-	}))
-
-	r.POST("/poll/:id/reveal", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-
-		poll, err := database.GetPoll(c, c.Param("id"))
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-
-		if poll.CreatedBy != claims.UserInfo.Username {
-			c.JSON(403, gin.H{"error": "Only the creator can reveal a poll result"})
-			return
-		}
-
-		err = poll.Reveal(c)
-		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
-			return
-		}
-		pId, _ := primitive.ObjectIDFromHex(poll.Id)
-		action := database.Action{
-			Id:     "",
-			PollId: pId,
-			Date:   primitive.NewDateTimeFromTime(time.Now()),
-			User:   claims.UserInfo.Username,
-			Action: "Reveal Results",
 		}
 		err = database.WriteAction(c, &action)
 		if err != nil {
@@ -553,13 +507,18 @@ func main() {
 	r.Run()
 }
 
+// isEvals determines if the current user is evals, allowing for a dev mode override
+func isEvals(user cshAuth.CSHUserInfo) bool {
+	return DEV_FORCE_IS_EVALS || containsString(user.Groups, "eboard-evaluations")
+}
+
 // canVote determines whether a user can cast a vote.
 //
 // returns an integer value: 0 is success, 1 is database error, 3 is not active, 4 is gatekept, 9 is already voted
 // TODO: use the return value to influence messages shown on results page
 func canVote(user cshAuth.CSHUserInfo, poll database.Poll, allowedUsers []string) int {
 	// always false if user is not active
-	if !slices.Contains(user.Groups, "active") {
+	if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(user.Groups, "active") {
 		return 3
 	}
 	voted, err := database.HasVoted(context.Background(), poll.Id, user.Username)
