@@ -2,11 +2,12 @@ FROM docker.io/golang:1.24-alpine AS build
 
 WORKDIR /src/
 RUN apk add git
-COPY go* .
-COPY *.go .
+COPY go.* .
+RUN go mod download # do this before build for caching
 COPY database database
 COPY logging logging
 COPY sse sse
+COPY *.go .
 RUN go build -v -o vote
 
 FROM docker.io/alpine
