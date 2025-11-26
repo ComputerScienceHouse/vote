@@ -33,6 +33,11 @@
       <br />
       <br />
 
+      {{ if and $.IsHidden $.IsOpen }}
+      <div id="results">
+        <h4>Results will be available once the poll closes</h4>
+      </div>
+      {{ else }}
       <div id="results">
         {{ range $i, $val := .Results }}
           {{ if eq $.VoteType "ranked" }}
@@ -46,6 +51,7 @@
           {{ end }}
         {{ end }}
       </div>
+      {{ end }}
       {{ if and (.CanModify) (.IsHidden) }}
       <br />
       <br />

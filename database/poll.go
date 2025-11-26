@@ -21,8 +21,11 @@ type Poll struct {
 	Gatekeep         bool      `bson:"gatekeep"`
 	QuorumType       float64   `bson:"quorumType"`
 	AllowedUsers     []string  `bson:"allowedUsers"`
-	Hidden           bool      `bson:"hidden"`
 	AllowWriteIns    bool      `bson:"writeins"`
+
+	// Prevent this poll from having progress displayed
+	// This is important for events like elections where the results shouldn't be visible mid vote
+	Hidden bool `bson:"hidden"`
 }
 
 const POLL_TYPE_SIMPLE = "simple"
@@ -62,20 +65,6 @@ func (poll *Poll) Hide(ctx context.Context) error {
 	objId, _ := primitive.ObjectIDFromHex(poll.Id)
 
 	_, err := Client.Database(db).Collection("polls").UpdateOne(ctx, map[string]interface{}{"_id": objId}, map[string]interface{}{"$set": map[string]interface{}{"hidden": true}})
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (poll *Poll) Reveal(ctx context.Context) error {
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
-	objId, _ := primitive.ObjectIDFromHex(poll.Id)
-
-	_, err := Client.Database(db).Collection("polls").UpdateOne(ctx, map[string]interface{}{"_id": objId}, map[string]interface{}{"$set": map[string]interface{}{"hidden": false}})
 	if err != nil {
 		return err
 	}
