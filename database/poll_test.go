@@ -1,7 +1,9 @@
 package database
 
 import (
+	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -128,9 +130,95 @@ func TestResultCalcs(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			results, err := calculateRankedResult(test.votes)
+			results, err := calculateRankedResult(context.Background(), test.votes)
 			assert.Equal(t, test.results, results)
 			assert.Equal(t, test.err, err)
+		})
+	}
+}
+
+func TestOrderOptions(t *testing.T) {
+	tests := []struct {
+		name   string
+		input  map[string]int
+		output []string
+	}{
+		{
+			name: "SimpleOrder",
+			input: map[string]int{
+				"one":   1,
+				"two":   2,
+				"three": 3,
+				"four":  4,
+			},
+			output: []string{"one", "two", "three", "four"},
+		},
+		{
+			name: "Reversed",
+			input: map[string]int{
+				"one":   4,
+				"two":   3,
+				"three": 2,
+				"four":  1,
+			},
+			output: []string{"four", "three", "two", "one"},
+		},
+		{
+			name: "HighStart",
+			input: map[string]int{
+				"one":   2,
+				"two":   3,
+				"three": 4,
+				"four":  5,
+			},
+			output: []string{"one", "two", "three", "four"},
+		},
+		{
+			name: "LowStart",
+			input: map[string]int{
+				"one":   0,
+				"two":   1,
+				"three": 2,
+				"four":  3,
+			},
+			output: []string{"one", "two", "three", "four"},
+		},
+		{
+			name: "Negative",
+			input: map[string]int{
+				"one":   -1,
+				"two":   1,
+				"three": 2,
+				"four":  3,
+			},
+			output: []string{"one", "two", "three", "four"},
+		},
+		{
+			name: "duplicate, expect bad output",
+			input: map[string]int{
+				"one":   0,
+				"two":   1,
+				"three": 1,
+				"four":  2,
+			},
+			output: []string{"one", "three", "three", "four"},
+		},
+		{
+			name: "Gap",
+			input: map[string]int{
+				"one":   1,
+				"two":   2,
+				"three": 4,
+				"four":  5,
+			},
+			output: []string{"one", "two", "three", "four"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			assert.Equal(t, test.output, orderOptions(ctx, test.input))
 		})
 	}
 }
