@@ -143,32 +143,32 @@ func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
 
 	cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 		{{
-			"$match", bson.D{
-				{"userId", userId},
+			Key: "$match", Value: bson.D{
+				{Key: "userId", Value: userId},
 			},
 		}},
 		{{
-			"$lookup", bson.D{
-				{"from", "polls"},
-				{"localField", "pollId"},
-				{"foreignField", "_id"},
-				{"as", "polls"},
+			Key: "$lookup", Value: bson.D{
+				{Key: "from", Value: "polls"},
+				{Key: "localField", Value: "pollId"},
+				{Key: "foreignField", Value: "_id"},
+				{Key: "as", Value: "polls"},
 			},
 		}},
 		{{
-			"$unwind", bson.D{
-				{"path", "$polls"},
-				{"preserveNullAndEmptyArrays", false},
+			Key: "$unwind", Value: bson.D{
+				{Key: "path", Value: "$polls"},
+				{Key: "preserveNullAndEmptyArrays", Value: false},
 			},
 		}},
 		{{
-			"$replaceRoot", bson.D{
-				{"newRoot", "$polls"},
+			Key: "$replaceRoot", Value: bson.D{
+				{Key: "newRoot", Value: "$polls"},
 			},
 		}},
 		{{
-			"$match", bson.D{
-				{"open", false},
+			Key: "$match", Value: bson.D{
+				{Key: "open", Value: false},
 			},
 		}},
 	})
@@ -293,15 +293,15 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		pollResult := make(map[string]int)
 		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 			{{
-				"$match", bson.D{
-					{"pollId", pollId},
+				Key: "$match", Value: bson.D{
+					{Key: "pollId", Value: pollId},
 				},
 			}},
 			{{
-				"$group", bson.D{
-					{"_id", "$option"},
-					{"count", bson.D{
-						{"$sum", 1},
+				Key: "$group", Value: bson.D{
+					{Key: "_id", Value: "$option"},
+					{Key: "count", Value: bson.D{
+						{Key: "$sum", Value: 1},
 					}},
 				},
 			}},
@@ -328,8 +328,8 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		// Get all votes
 		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 			{{
-				"$match", bson.D{
-					{"pollId", pollId},
+				Key: "$match", Value: bson.D{
+					{Key: "pollId", Value: pollId},
 				},
 			}},
 		})
