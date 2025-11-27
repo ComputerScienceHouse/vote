@@ -217,7 +217,8 @@ func TestOrderOptions(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ctx, _ := context.WithTimeout(context.Background(), time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+			defer cancel()
 			assert.Equal(t, test.output, orderOptions(ctx, test.input))
 		})
 	}
