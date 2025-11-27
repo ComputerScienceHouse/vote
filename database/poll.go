@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"sort"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -181,8 +182,27 @@ func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
 	return polls, nil
 }
 
-func calculateRankedResult(votesRaw []RankedVote) ([]map[string]int, error) {
-	// We want to store those that were eliminated
+// calculateRankedResult determines a result for a ranked choice vote
+// votesRaw is the RankedVote entries that are returned directly from the database
+// The algorithm defined in the Constitution as of 26 Nov 2025 is as follows:
+//
+// > The winning option is selected outright if it gains more than half the votes
+// > cast as a first preference. If not, the option with the fewest number of first
+// > preference votes is eliminated and their votes move to the second preference
+// > marked on the ballots. This process continues until one option has half of the
+// > votes cast and is elected.
+//
+// The return value consists of a list of voting rounds. Each round contains a
+// mapping of the vote options to their vote share for that round. If the vote
+// is not decided in a given round, there will be a subsequent round with the
+// option that had the fewest votes eliminated, and its votes redistributed.
+//
+// The last entry in this list is the final round, and the option with the most
+// votes in this round is the winner. If all options have the same, then it is
+// unfortunately a tie, and the vote is not resolvable, as there is no lowest
+// option to eliminate.
+func calculateRankedResult(ctx context.Context, votesRaw []RankedVote) ([]map[string]int, error) {
+	// We want to store those that were eliminated so we don't accidentally reinclude them
 	eliminated := make([]string, 0)
 	votes := make([][]string, 0)
 	finalResult := make([]map[string]int, 0)
@@ -190,9 +210,7 @@ func calculateRankedResult(votesRaw []RankedVote) ([]map[string]int, error) {
 	//change ranked votes from a map (which is unordered) to a slice of votes (which is ordered)
 	//order is from first preference to last preference
 	for _, vote := range votesRaw {
-		temp, cf := context.WithTimeout(context.Background(), 1*time.Second)
-		optionList := orderOptions(vote.Options, temp)
-		cf()
+		optionList := orderOptions(ctx, vote.Options)
 		votes = append(votes, optionList)
 	}
 
@@ -321,7 +339,7 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		}
 		var votesRaw []RankedVote
 		cursor.All(ctx, &votesRaw)
-		return calculateRankedResult(votesRaw)
+		return calculateRankedResult(ctx, votesRaw)
 	}
 	return nil, nil
 }
@@ -335,21 +353,35 @@ func containsValue(slice []string, value string) bool {
 	return false
 }
 
-func orderOptions(options map[string]int, ctx context.Context) []string {
-	result := make([]string, 0, len(options))
-	order := 1
-	for order <= len(options) {
-		for option, preference := range options {
-			select {
-			case <-ctx.Done():
-				return make([]string, 0)
-			default:
-				if preference == order {
-					result = append(result, option)
-					order += 1
-				}
-			}
-		}
+// orderOptions takes a RankedVote's options, and returns an ordered list of
+// their choices
+//
+// it's invalid for a vote to list the same number multiple times, the output
+// will vary based on the map ordering of the options, and so is not guaranteed
+// to be deterministic
+//
+// ctx is no longer used, as this function is not expected to hang, but remains
+// an argument per golang standards
+//
+// the return values is the option keys, ordered from lowest to highest
+func orderOptions(ctx context.Context, options map[string]int) []string {
+	// Figure out all the ranks they've listed
+	var ranks []int = make([]int, len(options))
+	reverse_map := make(map[int]string)
+	i := 0
+	for option, rank := range options {
+		ranks[i] = rank
+		reverse_map[rank] = option
+		i += 1
 	}
-	return result
+
+	sort.Ints(ranks)
+
+	// normalise the ranks for counts that don't start at 1
+	var choices []string = make([]string, len(ranks))
+	for idx, rank := range ranks {
+		choices[idx] = reverse_map[rank]
+	}
+
+	return choices
 }
