@@ -157,7 +157,7 @@ func main() {
 			OpenedTime:       time.Now(),
 			Open:             true,
 			QuorumType:       quorum,
-			Hidden:           false,
+			Hidden:           c.PostForm("hidden") == "true",
 			Gatekeep:         c.PostForm("gatekeep") == "true",
 			AllowWriteIns:    c.PostForm("allowWriteIn") == "true",
 		}
