@@ -6,6 +6,7 @@ require (
 	github.com/computersciencehouse/csh-auth v0.1.0
 	github.com/gin-gonic/gin v1.11.0
 	github.com/sirupsen/logrus v1.9.3
+	github.com/slack-go/slack v0.17.3
 	go.mongodb.org/mongo-driver v1.17.6
 	mvdan.cc/xurls/v2 v2.6.0
 )
@@ -38,7 +39,6 @@ require (
 	github.com/pquerna/cachecontrol v0.2.0 // indirect
 	github.com/quic-go/qpack v0.5.1 // indirect
 	github.com/quic-go/quic-go v0.55.0 // indirect
-	github.com/slack-go/slack v0.17.3 // indirect
 	github.com/twitchyliquid64/golang-asm v0.15.1 // indirect
 	github.com/ugorji/go/codec v1.3.1 // indirect
 	github.com/xdg-go/pbkdf2 v1.0.0 // indirect

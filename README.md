@@ -11,7 +11,9 @@ Implementation
 
 ## Configuration
 
-You'll need to set up these values in your environment. Ask an RTP for OIDC credentials. A docker-compose file is provided for convenience. Otherwise, I trust you to figure it out!
+If you're using the compose file, you'll need to ask an RTP for the vote-dev OIDC secret, and set it as `VOTE_OIDC_SECRET` in your environment
+
+If you're not using the compose file, you'll need more of these
 
 ```
 VOTE_HOST=http://localhost:8080
@@ -27,10 +29,25 @@ VOTE_SLACK_APP_TOKEN=
 VOTE_SLACK_BOT_TOKEN=
 ```
 
+### Dev Overrides
+`DEV_DISABLE_ACTIVE_FILTERS="true"` will disable the requirements that you be active to vote
+`DEV_FORCE_IS_EVALS="true"` will force vote to treat all users as the Evals director
+
+## Linting
+These will be checked by CI
+
+```
+# tidy dependencies
+go mod tidy
+
+# format all code according to go standards
+gofmt -w -s *.go logging sse database
+```
+
 ## To-Dos
 
 - [ ] Don't let the user fuck it up
 - [ ] Show E-Board polls with a higher priority
-- [ ] Move Hide Vote to create instead of after you vote :skull:
+- [x] Move Hide Vote to create instead of after you vote :skull:
 - [ ] Display the reason why a user is on the results page of a running poll
 - [ ] Display minimum time left that a poll is open
