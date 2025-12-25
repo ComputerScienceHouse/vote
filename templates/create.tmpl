@@ -72,6 +72,14 @@
           >
           <span>Ranked Choice Vote</span>
         </div>
+        <div class="form-group">
+          <input
+            type="checkbox"
+            name="hidden"
+            value="true"
+          >
+          <span>Hide Results Until Vote is Complete</span>
+        </div>
         {{ if .IsEvals }}
         <div class="form-group">
             <input
@@ -81,7 +89,7 @@
               value="true"
               onchange="onGatekeepChange()"
             >
-            <span> Gatekeep Required</span>
+            <span> Gatekeep Required (Require Quorum, Limit Voters, Force Automatic Close)</span>
         </div>
         <div id="quorumTypeGroup" class="form-group" style="display:none">
             <span>Quorum Type</span>

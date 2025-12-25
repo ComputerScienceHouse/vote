@@ -151,8 +151,14 @@ func EvaluatePolls() {
 			logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls close"}).Error(err)
 			continue
 		}
+		announceStr := "The vote \"" + poll.ShortDescription + "\" has closed."
+		if !poll.Hidden {
+			announceStr += " Check out the results at " + pollLink
+		} else {
+			announceStr += " Results will be posted shortly."
+		}
 		_, _, _, err = slackData.Client.SendMessage(slackData.AnnouncementsChannel,
-			slack.MsgOptionText("The vote \""+poll.ShortDescription+"\" has closed. Check out the results at "+pollLink, false))
+			slack.MsgOptionText(announceStr, false))
 		if err != nil {
 			logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls announce"}).Error(err)
 		}
