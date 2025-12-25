@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"slices"
 	"sort"
 	"time"
 
@@ -34,6 +35,7 @@ type Poll struct {
 
 const POLL_TYPE_SIMPLE = "simple"
 const POLL_TYPE_RANKED = "ranked"
+const MATCH = "$match"
 
 func GetPoll(ctx context.Context, id string) (*Poll, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -143,7 +145,7 @@ func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
 
 	cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 		{{
-			Key: "$match", Value: bson.D{
+			Key: MATCH, Value: bson.D{
 				{Key: "userId", Value: userId},
 			},
 		}},
@@ -167,7 +169,7 @@ func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
 			},
 		}},
 		{{
-			Key: "$match", Value: bson.D{
+			Key: MATCH, Value: bson.D{
 				{Key: "open", Value: false},
 			},
 		}},
@@ -224,19 +226,15 @@ func calculateRankedResult(ctx context.Context, votesRaw []RankedVote) ([]map[st
 		for _, picks := range votes {
 			// Go over picks until we find a non-eliminated candidate
 			for _, candidate := range picks {
-				if !containsValue(eliminated, candidate) {
-					if _, ok := tallied[candidate]; ok {
+				if !slices.Contains(eliminated, candidate) {
 						tallied[candidate]++
-					} else {
-						tallied[candidate] = 1
-					}
 					voteCount += 1
 					break
 				}
 			}
 		}
 		// Eliminate lowest vote getter
-		minVote := 1000000             //the smallest number of votes received thus far (to find who is in last)
+		minVote := int(^uint(0)>>1)             //the smallest number of votes received thus far (to find who is in last)
 		minPerson := make([]string, 0) //the person(s) with the least votes that need removed
 		for person, vote := range tallied {
 			if vote < minVote { // this should always be true round one, to set a true "who is in last"
@@ -293,7 +291,7 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		pollResult := make(map[string]int)
 		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 			{{
-				Key: "$match", Value: bson.D{
+				Key: MATCH, Value: bson.D{
 					{Key: "pollId", Value: pollId},
 				},
 			}},
@@ -328,7 +326,7 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		// Get all votes
 		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 			{{
-				Key: "$match", Value: bson.D{
+				Key: MATCH, Value: bson.D{
 					{Key: "pollId", Value: pollId},
 				},
 			}},
@@ -343,14 +341,6 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 	return nil, nil
 }
 
-func containsValue(slice []string, value string) bool {
-	for _, item := range slice {
-		if item == value {
-			return true
-		}
-	}
-	return false
-}
 
 // orderOptions takes a RankedVote's options, and returns an ordered list of
 // their choices
