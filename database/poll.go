@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"math"
 	"slices"
 	"sort"
 	"time"
@@ -35,7 +36,6 @@ type Poll struct {
 
 const POLL_TYPE_SIMPLE = "simple"
 const POLL_TYPE_RANKED = "ranked"
-const MATCH = "$match"
 
 func GetPoll(ctx context.Context, id string) (*Poll, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -145,7 +145,7 @@ func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
 
 	cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 		{{
-			Key: MATCH, Value: bson.D{
+			Key: "$match", Value: bson.D{
 				{Key: "userId", Value: userId},
 			},
 		}},
@@ -169,7 +169,7 @@ func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
 			},
 		}},
 		{{
-			Key: MATCH, Value: bson.D{
+			Key: "$match", Value: bson.D{
 				{Key: "open", Value: false},
 			},
 		}},
@@ -234,7 +234,7 @@ func calculateRankedResult(ctx context.Context, votesRaw []RankedVote) ([]map[st
 			}
 		}
 		// Eliminate lowest vote getter
-		minVote := int(^uint(0) >> 1)  //the smallest number of votes received thus far (to find who is in last)
+		minVote := math.MaxInt         //the smallest number of votes received thus far (to find who is in last)
 		minPerson := make([]string, 0) //the person(s) with the least votes that need removed
 		for person, vote := range tallied {
 			if vote < minVote { // this should always be true round one, to set a true "who is in last"
@@ -291,7 +291,7 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		pollResult := make(map[string]int)
 		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 			{{
-				Key: MATCH, Value: bson.D{
+				Key: "$match", Value: bson.D{
 					{Key: "pollId", Value: pollId},
 				},
 			}},
@@ -326,7 +326,7 @@ func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
 		// Get all votes
 		cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
 			{{
-				Key: MATCH, Value: bson.D{
+				Key: "$match", Value: bson.D{
 					{Key: "pollId", Value: pollId},
 				},
 			}},
