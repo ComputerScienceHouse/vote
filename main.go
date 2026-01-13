@@ -67,6 +67,15 @@ func main() {
 	)
 	oidcClient.setupOidcClient(os.Getenv("VOTE_OIDC_ID"), os.Getenv("VOTE_OIDC_SECRET"))
 	InitConstitution()
+
+	if (DEV_DISABLE_ACTIVE_FILTERS) {
+		logging.Logger.WithFields(logrus.Fields{"method": "main init"}).Warning("Dev disable active filters is set!")
+	}
+
+	if (DEV_FORCE_IS_EVALS) {
+		logging.Logger.WithFields(logrus.Fields{"method": "main init"}).Warning("Dev force evals is set!")
+	}
+
 	r.GET("/auth/login", csh.AuthRequest)
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
@@ -299,8 +308,6 @@ func main() {
 				PollId: pId,
 				UserId: claims.UserInfo.Username,
 			}
-
-			fmt.Println(poll.Options)
 
 			for _, option := range poll.Options {
 				optionRankStr := c.PostForm(option)
