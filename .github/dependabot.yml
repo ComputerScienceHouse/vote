@@ -1,7 +1,0 @@
-version: 2
-updates:
-  - package-ecosystem: "gomod" # See documentation for possible values https://docs.github.com/en/code-security/dependabot/working-with-dependabot/dependabot-options-reference#package-ecosystem-
-    directory: "/" # Location of package manifests
-    target-branch: "dev"
-    schedule:
-      interval: "weekly"

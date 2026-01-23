@@ -4,7 +4,6 @@ import (
 	"context"
 	"os"
 	"strings"
-	"testing"
 	"time"
 
 	"github.com/computersciencehouse/vote/logging"
@@ -21,16 +20,10 @@ const (
 	Updated UpsertResult = 1
 )
 
-var Client *mongo.Client = Connect()
+var Client = Connect()
 var db = ""
 
 func Connect() *mongo.Client {
-	// This always gets invoked on initialisation. bad! it'd be nice if we only did this setup in main rather than components under test. for now we just skip if testing
-	if testing.Testing() {
-		logging.Logger.WithFields(logrus.Fields{"module": "database", "method": "Connect"}).Info("testing, not doing db connection, someone should mock this someday")
-		return nil
-	}
-
 	logging.Logger.WithFields(logrus.Fields{"module": "database", "method": "Connect"}).Info("beginning database connection")
 
 	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
