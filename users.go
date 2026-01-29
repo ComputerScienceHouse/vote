@@ -133,10 +133,15 @@ func (client *OIDCClient) GetUserInfo(user *OIDCUser) {
 		return
 	}
 	if len(arg) > 0 {
-		userData := make([]map[string]interface{}, 0)
+		userData := make([]map[string]any, 0)
 		err = json.Unmarshal(b, &userData)
 		// userdata attributes are a KV pair of string:[]any, this casts attributes, finds the specific attribute, casts it to a list of any, and then pulls the first field since there will only ever be one
-		user.SlackUID = userData[0]["attributes"].(map[string]interface{})["slackuid"].([]interface{})[0].(string)
+		userAttributes := userData[0]["attributes"].(map[string]any)
+		if slackIDRaw, exists := userAttributes["slackuid"]; exists {
+			user.SlackUID = slackIDRaw.([]any)[0].(string)
+		} else {
+			logging.Logger.WithFields(logrus.Fields{"method": "GetUserInfo"}).Error("User " + user.Username + " does not have a SlackUID. Skipping messaging.")
+		}
 	} else {
 		err = json.Unmarshal(b, &user)
 	}
