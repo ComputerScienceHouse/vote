@@ -87,6 +87,7 @@ func GetEligibleVoters() []string {
 func EvaluatePolls() {
 	ctx := context.Background()
 	polls, err := database.GetOpenGatekeepPolls(ctx)
+	var closedPolls []*database.Poll
 	if err != nil {
 		logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls getOpen"}).Error(err)
 		return
@@ -151,16 +152,31 @@ func EvaluatePolls() {
 			logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls close"}).Error(err)
 			continue
 		}
-		announceStr := "The vote \"" + poll.ShortDescription + "\" has closed."
+		closedPolls = append(closedPolls, poll)
+	}
+
+	if len(closedPolls) == 0 {
+		return;
+	}
+
+	// Announce all closed polls with one announcement.
+	announceStr := ""
+	if len(closedPolls) > 1 {
+		announceStr += "Updates on " + strconv.Itoa(len(closedPolls)) + " polls:\n\n"
+	}
+	for _, poll := range closedPolls {
+		pollLink := VOTE_HOST + "/poll/" + poll.Id
+		announceStr += "The vote \"" + poll.ShortDescription + "\" has closed."
 		if !poll.Hidden {
 			announceStr += " Check out the results at " + pollLink
 		} else {
 			announceStr += " Results will be posted shortly."
 		}
-		_, _, _, err = slackData.Client.SendMessage(slackData.AnnouncementsChannel,
-			slack.MsgOptionText(announceStr, false))
-		if err != nil {
-			logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls announce"}).Error(err)
-		}
+		announceStr += "\n"
+	}
+	_, _, _, err = slackData.Client.SendMessage(slackData.AnnouncementsChannel,
+		slack.MsgOptionText(announceStr, false))
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls announce"}).Error(err)
 	}
 }
