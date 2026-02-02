@@ -61,6 +61,17 @@ func (poll *Poll) Close(ctx context.Context) error {
 		return err
 	}
 
+	// log the number of people eligible to vote on that poll, the number of votes needed for quorum, and the number of votes cast
+	logging.Logger.WithFields(logrus.Fields{
+		"method":            "poll close",
+		"poll_id":           poll.Id,
+		"short_description": poll.ShortDescription,
+		"allowed_voters":    len(poll.AllowedUsers),
+		"quorum_type":       poll.QuorumType,
+		"vote_type":         poll.VoteType,
+		"votes_required":    math.Ceil(float64(len(poll.AllowedUsers)) * poll.QuorumType),
+	}).Info("Poll {short_description} (with id {poll_id}) is now closed. There were {allowed_voters} eligible voters, and with a quorum of {quorum_type}, {votes_required} votes were required to reach quorum.")
+
 	return nil
 }
 
