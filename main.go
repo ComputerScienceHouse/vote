@@ -408,18 +408,22 @@ func main() {
 
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
+		votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
 		c.HTML(200, "result.tmpl", gin.H{
-			"Id":               poll.Id,
-			"ShortDescription": poll.ShortDescription,
-			"LongDescription":  poll.LongDescription,
-			"VoteType":         poll.VoteType,
-			"Results":          results,
-			"IsOpen":           poll.Open,
-			"IsHidden":         poll.Hidden,
-			"CanModify":        canModify,
-			"Username":         claims.UserInfo.Username,
-			"FullName":         claims.UserInfo.FullName,
-			"Gatekeep":         poll.Gatekeep,
+			"Id":                   poll.Id,
+			"ShortDescription":     poll.ShortDescription,
+			"LongDescription":      poll.LongDescription,
+			"VoteType":             poll.VoteType,
+			"Results":              results,
+			"IsOpen":               poll.Open,
+			"IsHidden":             poll.Hidden,
+			"CanModify":            canModify,
+			"Username":             claims.UserInfo.Username,
+			"FullName":             claims.UserInfo.FullName,
+			"Gatekeep":             poll.Gatekeep,
+			"Quorum":               poll.QuorumType,
+			"EligibleVoters":       poll.AllowedUsers,
+			"VotesNeededForQuorum": votesNeededForQuorum,
 		})
 	}))
 
