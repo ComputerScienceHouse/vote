@@ -70,7 +70,7 @@ func (poll *Poll) Close(ctx context.Context) error {
 		"quorum_type":       poll.QuorumType,
 		"vote_type":         poll.VoteType,
 		"votes_required":    math.Ceil(float64(len(poll.AllowedUsers)) * poll.QuorumType),
-	}).Info("Poll {short_description} (with id {poll_id}) is now closed. There were {allowed_voters} eligible voters, and with a quorum of {quorum_type}, {votes_required} votes were required to reach quorum.")
+	}).Info("Poll is now closed. Calculating results.")
 
 	return nil
 }
@@ -97,8 +97,21 @@ func CreatePoll(ctx context.Context, poll *Poll) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	poll_id := result.InsertedID.(primitive.ObjectID).Hex()
 
-	return result.InsertedID.(primitive.ObjectID).Hex(), nil
+	// Log the number of people eligible to vote on that poll, the number of votes needed for quorum, and whether gatekeep is required
+	logging.Logger.WithFields(logrus.Fields{
+		"method":            "poll create",
+		"poll_id":           poll_id,
+		"short_description": poll.ShortDescription,
+		"allowed_voters":    len(poll.AllowedUsers),
+		"quorum_type":       poll.QuorumType,
+		"vote_type":         poll.VoteType,
+		"votes_required":    math.Ceil(float64(len(poll.AllowedUsers)) * poll.QuorumType),
+		"gatekeep":          poll.Gatekeep,
+	}).Info("Poll created.")
+
+	return poll_id, nil
 }
 
 func GetOpenPolls(ctx context.Context) ([]*Poll, error) {
