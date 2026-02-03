@@ -86,7 +86,6 @@ func CreatePoll(ctx context.Context, poll *Poll) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
 	return result.InsertedID.(primitive.ObjectID).Hex(), nil
 }
 

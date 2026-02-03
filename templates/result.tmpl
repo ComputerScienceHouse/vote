@@ -38,6 +38,21 @@
         <h4>Results will be available once the poll closes</h4>
       </div>
       {{ else }}
+      {{/* Displays information about required quorum and number of voters */}}
+      <div id="quorum-info">
+        <h5>Number of Eligible Voters: {{ len .EligibleVoters }}</h5>
+        <div id="votes-needed-for-quorum">
+          {{/* This works currently because quorum type can only be set if gatekeep is required */}}
+          {{ if not .Gatekeep }}
+            <h5>No quorum required for this poll.</h5>
+          {{ else }}
+            <h5>Quorum Type: {{ .Quorum }}%</h5>
+            <h5>Votes Needed For Quorum: {{ .VotesNeededForQuorum }}</h5>
+          {{ end }}
+          <br/>
+          <br/>
+        </div>
+      </div>
       <div id="results">
         {{ range $i, $val := .Results }}
           {{ if eq $.VoteType "ranked" }}

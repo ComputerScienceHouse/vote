@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"math"
 	"net/http"
 	"os"
 	"slices"
@@ -33,6 +34,17 @@ var DEV_FORCE_IS_EVALS bool = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
 
 func inc(x int) string {
 	return strconv.Itoa(x + 1)
+}
+
+// Gets the number of people eligible to vote in a poll
+func GetVoterCount(poll database.Poll) int {
+	return len(poll.AllowedUsers)
+}
+
+// Calculates the number of votes required for quorum in a poll
+func CalculateQuorum(poll database.Poll) int {
+	voterCount := GetVoterCount(poll)
+	return int(math.Ceil(float64(voterCount) * poll.QuorumType))
 }
 
 func MakeLinks(s string) template.HTML {
@@ -68,11 +80,11 @@ func main() {
 	oidcClient.setupOidcClient(os.Getenv("VOTE_OIDC_ID"), os.Getenv("VOTE_OIDC_SECRET"))
 	InitConstitution()
 
-	if (DEV_DISABLE_ACTIVE_FILTERS) {
+	if DEV_DISABLE_ACTIVE_FILTERS {
 		logging.Logger.WithFields(logrus.Fields{"method": "main init"}).Warning("Dev disable active filters is set!")
 	}
 
-	if (DEV_FORCE_IS_EVALS) {
+	if DEV_FORCE_IS_EVALS {
 		logging.Logger.WithFields(logrus.Fields{"method": "main init"}).Warning("Dev force evals is set!")
 	}
 
@@ -169,7 +181,7 @@ func main() {
 			VoteType:         database.POLL_TYPE_SIMPLE,
 			OpenedTime:       time.Now(),
 			Open:             true,
-			QuorumType:       quorum,
+			QuorumType:       float64(quorum),
 			Gatekeep:         c.PostForm("gatekeep") == "true",
 			AllowWriteIns:    c.PostForm("allowWriteIn") == "true",
 			Hidden:           c.PostForm("hidden") == "true",
@@ -408,18 +420,22 @@ func main() {
 
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
+		votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
 		c.HTML(200, "result.tmpl", gin.H{
-			"Id":               poll.Id,
-			"ShortDescription": poll.ShortDescription,
-			"LongDescription":  poll.LongDescription,
-			"VoteType":         poll.VoteType,
-			"Results":          results,
-			"IsOpen":           poll.Open,
-			"IsHidden":         poll.Hidden,
-			"CanModify":        canModify,
-			"Username":         claims.UserInfo.Username,
-			"FullName":         claims.UserInfo.FullName,
-			"Gatekeep":         poll.Gatekeep,
+			"Id":                   poll.Id,
+			"ShortDescription":     poll.ShortDescription,
+			"LongDescription":      poll.LongDescription,
+			"VoteType":             poll.VoteType,
+			"Results":              results,
+			"IsOpen":               poll.Open,
+			"IsHidden":             poll.Hidden,
+			"CanModify":            canModify,
+			"Username":             claims.UserInfo.Username,
+			"FullName":             claims.UserInfo.FullName,
+			"Gatekeep":             poll.Gatekeep,
+			"Quorum":               strconv.FormatFloat(poll.QuorumType*100.0, 'f', 0, 64),
+			"EligibleVoters":       poll.AllowedUsers,
+			"VotesNeededForQuorum": votesNeededForQuorum,
 		})
 	}))
 
