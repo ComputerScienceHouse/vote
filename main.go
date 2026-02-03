@@ -42,10 +42,6 @@ func MakeLinks(s string) template.HTML {
 	return template.HTML(safe)
 }
 
-func AsPercentage(num float64) string {
-	return fmt.Sprintf("%f", num*100.0)
-}
-
 var oidcClient = OIDCClient{}
 
 func main() {
@@ -54,7 +50,6 @@ func main() {
 	r.SetFuncMap(template.FuncMap{
 		"inc":       inc,
 		"MakeLinks": MakeLinks,
-		"AsPercent": AsPercentage,
 	})
 	r.LoadHTMLGlob("templates/*")
 	broker := sse.NewBroker()
@@ -426,7 +421,7 @@ func main() {
 			"Username":             claims.UserInfo.Username,
 			"FullName":             claims.UserInfo.FullName,
 			"Gatekeep":             poll.Gatekeep,
-			"Quorum":               poll.QuorumType,
+			"Quorum":               strconv.FormatFloat(poll.QuorumType*100.0, 'f', 0, 64),
 			"EligibleVoters":       poll.AllowedUsers,
 			"VotesNeededForQuorum": votesNeededForQuorum,
 		})
