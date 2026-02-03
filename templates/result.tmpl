@@ -46,7 +46,7 @@
           {{ if not .Gatekeep }}
             <h5>No quorum required for this poll.</h5>
           {{ else }}
-            <h5>Quorum Type: {{ .Quorum }}</h5>
+            <h5>Quorum Type: {{ .QuorumType }}</h5>
             <h5>Votes Needed For Quorum: {{ .VotesNeededForQuorum }}</h5>
           {{ end }}
           <br/>
