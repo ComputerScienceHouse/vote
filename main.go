@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"math"
 	"net/http"
 	"os"
 	"slices"
@@ -33,6 +34,17 @@ var DEV_FORCE_IS_EVALS bool = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
 
 func inc(x int) string {
 	return strconv.Itoa(x + 1)
+}
+
+// Gets the number of people eligible to vote in a poll
+func GetVoterCount(poll database.Poll) int {
+	return len(poll.AllowedUsers)
+}
+
+// Calculates the number of votes required for quorum in a poll
+func CalculateQuorum(poll database.Poll) int {
+	voterCount := GetVoterCount(poll)
+	return int(math.Ceil(float64(voterCount) * poll.QuorumType))
 }
 
 func MakeLinks(s string) template.HTML {
@@ -169,7 +181,7 @@ func main() {
 			VoteType:         database.POLL_TYPE_SIMPLE,
 			OpenedTime:       time.Now(),
 			Open:             true,
-			QuorumType:       quorum,
+			QuorumType:       float64(quorum),
 			Gatekeep:         c.PostForm("gatekeep") == "true",
 			AllowWriteIns:    c.PostForm("allowWriteIn") == "true",
 			Hidden:           c.PostForm("hidden") == "true",

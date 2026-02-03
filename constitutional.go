@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"math"
 	"os"
 	"strings"
 	"time"
@@ -99,10 +98,9 @@ func EvaluatePolls() {
 		if poll.OpenedTime.AddDate(0, 0, 2).After(now) {
 			continue
 		}
-		//Two-Thirds Quorum
-		voterCount := len(poll.AllowedUsers)
-		//fuckass rounding
-		quorum := int(math.Ceil(float64(voterCount) * poll.QuorumType))
+
+		quorum := CalculateQuorum(*poll)
+
 		notVoted := make([]*OIDCUser, 0)
 		votedCount := 0
 		// check all voters to see if they have voted
