@@ -25,7 +25,7 @@
     </nav>
 
     <div class="container main p-5">
-      <h2>{{ .ShortDescription }}</h2>
+      <h2 style="white-space: normal; word-wrap: break-word;">{{ .ShortDescription }}</h2>
       {{ if .LongDescription }}
       <h4>{{ .LongDescription | MakeLinks }}</h4>
       {{ end }}
