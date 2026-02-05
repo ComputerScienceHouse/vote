@@ -92,10 +92,10 @@ func EvaluatePolls() {
 	}
 	for _, poll := range polls {
 		now := time.Now()
-		// if OpenedTime + 2 days later is before today, it's been open for less than 48 hours, and we will re-evaluate next run
-		// if after, it's been more than 48 hours
-		// we still won't close until 72, but we want to start messaging at 48
-		if poll.OpenedTime.AddDate(0, 0, 2).After(now) {
+		// if OpenedTime + 1 day later is before today, it's been open for less than 24 hours, and we will re-evaluate next run
+		// if after, it's been more than 24 hours
+		// we still won't close until 48, but we want to start messaging at 24
+		if poll.OpenedTime.AddDate(0, 0, 1).After(now) {
 			continue
 		}
 
@@ -138,8 +138,8 @@ func EvaluatePolls() {
 			}
 			continue
 		}
-		// close poll after 72 hours
-		if poll.OpenedTime.AddDate(0, 0, 3).After(now) {
+		// close poll after 48 hours
+		if poll.OpenedTime.AddDate(0, 0, 2).After(now) {
 			continue
 		}
 		// we close the poll here
