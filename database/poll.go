@@ -142,7 +142,7 @@ func GetClosedVotedPolls(ctx context.Context, userId string) ([]*Poll, error) {
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	cursor, err := Client.Database(db).Collection("votes").Aggregate(ctx, mongo.Pipeline{
+	cursor, err := Client.Database(db).Collection("voters").Aggregate(ctx, mongo.Pipeline{
 		{{
 			Key: "$match", Value: bson.D{
 				{Key: "userId", Value: userId},
