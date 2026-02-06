@@ -430,6 +430,7 @@ func main() {
 			"IsOpen":               poll.Open,
 			"IsHidden":             poll.Hidden,
 			"CanModify":            canModify,
+			"CanVote":              canVote(claims.UserInfo, *poll, poll.AllowedUsers),
 			"Username":             claims.UserInfo.Username,
 			"FullName":             claims.UserInfo.FullName,
 			"Gatekeep":             poll.Gatekeep,
