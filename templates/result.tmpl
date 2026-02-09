@@ -27,9 +27,9 @@
     <div class="container main p-5">
       {{ if eq .CanVote 9 }}
         <div id="already-voted" class="alert alert-info alert-dismissible fade show d-flex flex-row align-items-center" role="alert">
-            <h5>You have already voted in this poll.</h5>
-            <button class="close" style="cursor: pointer;" onclick="document.getElementById('already-voted').style.display='none';">
-              <span>&times;</span>
+            <h5 class="m-0">You have already voted in this poll.</h5>
+            <button class="close m-0" style="cursor: pointer;" onclick="document.getElementById('already-voted').style.display='none';">
+              <span class="align-items-center">&times;</span>
             </button>
         </div>
       {{ end }}
