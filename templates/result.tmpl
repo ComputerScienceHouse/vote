@@ -26,7 +26,7 @@
 
     <div class="container main p-5">
       {{ if eq .CanVote 9 }}
-        <div id="already-voted" class="alert alert-info alert-dismissible fade show" role="alert">
+        <div id="already-voted" class="alert alert-info alert-dismissible fade show d-flex flex-row align-items-center" role="alert">
             <h5>You have already voted in this poll.</h5>
             <button class="close" style="cursor: pointer;" onclick="document.getElementById('already-voted').style.display='none';">
               <span>&times;</span>
@@ -47,16 +47,7 @@
         <h4>Results will be available once the poll closes</h4>
       </div>
       {{ else }}
-      {{/* Displays a message informing you that you are unable to vote, and common reasons why this might be the case */}}
       
-      {{ if and (gt .CanVote 0) (ne .CanVote 9) }}
-      <div id="cannot-vote">
-        <h5>
-            You are not eligible to vote in this poll. This likely means that you are either not active 
-            or did not meet the gatekeep requirements at the time the poll opened.
-        </h5>
-      </div>
-      {{ end }}
       {{/* Displays information about required quorum and number of voters */}}
       <div id="quorum-info">
         <h5>Number of Eligible Voters: {{ len .EligibleVoters }}</h5>
