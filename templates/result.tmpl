@@ -38,10 +38,17 @@
               <span class="align-items-center">&times;</span>
             </button>
         </div>
-      {{ else if eq .CanVote 3 }}
-        <div id="cannot-vote" class="alert alert-danger alert-dismissible d-flex flex-row align-items-center" role="alert">
-            <h5 class="m-0">You are not eligible to vote in this poll because you are not an active member.</h5>
-            <button class="close m-0" style="cursor: pointer;" onclick="document.getElementById('cannot-vote').classList.add('d-none');">
+      {{ else if eq .CanVote 1 }}
+          <div id="db-error" class="alert alert-danger alert-dismissible d-flex flex-row align-items-center" role="alert">
+              <h5 class="m-0">There was an error checking your voting eligibility. Try refreshing the page or contacting the RTPs if the issue persists.</h5>
+              <button class="close m-0" style="cursor: pointer;" onclick="document.getElementById('db-error').classList.add('d-none');">
+                <span class="align-items-center">&times;</span>
+              </button>
+          </div>
+      {{ else if gt .CanVote 0 }}
+        <div id="cannot-vote" class="alert alert-warning alert-dismissible d-flex flex-row align-items-center" role="alert">
+            <h5 class="m-0">You are not eligible to vote in this poll. This is likely because you are not an Active Member, or because you did not meet the gatekeep requirements by the time the poll opened.</h5>
+            <button class="close m-0 ml-3" style="cursor: pointer;" onclick="document.getElementById('cannot-vote').classList.add('d-none');">
               <span class="align-items-center">&times;</span>
             </button>
         </div>
