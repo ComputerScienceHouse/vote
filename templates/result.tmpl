@@ -9,6 +9,12 @@
       media="screen"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+      .container div.d-none {
+        display: none!important;
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
@@ -26,14 +32,21 @@
 
     <div class="container main p-5">
       {{ if eq .CanVote 9 }}
-        <div id="already-voted" class="alert alert-info alert-dismissible fade show d-flex flex-row align-items-center" role="alert">
+        <div id="already-voted" class="alert alert-info alert-dismissible d-flex flex-row align-items-center" role="alert">
             <h5 class="m-0">You have already voted in this poll.</h5>
-            <button class="close m-0" style="cursor: pointer;" onclick="document.getElementById('already-voted').style.display='none';">
+            <button class="close m-0" style="cursor: pointer;" onclick="document.getElementById('already-voted').classList.add('d-none');">
+              <span class="align-items-center">&times;</span>
+            </button>
+        </div>
+      {{ else if eq .CanVote 3 }}
+        <div id="cannot-vote" class="alert alert-danger alert-dismissible d-flex flex-row align-items-center" role="alert">
+            <h5 class="m-0">You are not eligible to vote in this poll because you are not an active member.</h5>
+            <button class="close m-0" style="cursor: pointer;" onclick="document.getElementById('cannot-vote').classList.add('d-none');">
               <span class="align-items-center">&times;</span>
             </button>
         </div>
       {{ end }}
-
+      
       <h2 style="white-space: normal; word-wrap: break-word;">{{ .ShortDescription }}</h2>
       {{ if .LongDescription }}
       <h4>{{ .LongDescription | MakeLinks }}</h4>
