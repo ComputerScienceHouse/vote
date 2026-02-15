@@ -126,7 +126,34 @@ func main() {
 		closedPolls = uniquePolls(closedPolls)
 
 		c.HTML(200, "index.tmpl", gin.H{
-			"Polls":       polls,
+			"Polls":    polls,
+			"Username": claims.UserInfo.Username,
+			"FullName": claims.UserInfo.FullName,
+		})
+	}))
+
+	r.GET("/closed", csh.AuthWrapper(func(c *gin.Context) {
+		cl, _ := c.Get("cshauth")
+		claims := cl.(cshAuth.CSHClaims)
+
+		closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
+		if err != nil {
+			c.JSON(500, gin.H{"error": err.Error()})
+			return
+		}
+		closedPolls = append(closedPolls, ownedPolls...)
+
+		sort.Slice(closedPolls, func(i, j int) bool {
+			return closedPolls[i].Id > closedPolls[j].Id
+		})
+		closedPolls = uniquePolls(closedPolls)
+
+		c.HTML(200, "closed.tmpl", gin.H{
 			"ClosedPolls": closedPolls,
 			"Username":    claims.UserInfo.Username,
 			"FullName":    claims.UserInfo.FullName,
