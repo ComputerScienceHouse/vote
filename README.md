@@ -33,6 +33,22 @@ VOTE_SLACK_BOT_TOKEN=
 `DEV_DISABLE_ACTIVE_FILTERS="true"` will disable the requirements that you be active to vote
 `DEV_FORCE_IS_EVALS="true"` will force vote to treat all users as the Evals director
 
+## Docker Compose
+
+Use `docker-compose.dev.yaml` to have code bind with the container, meaning you don't have
+to rebuild the container every time you make changes.
+
+```bash
+# dev
+podman compose -f docker-compose.dev.yaml up  # rerun this to load changes
+
+## load changes
+podman compose down; podman compose -f docker-compose.dev.yaml up
+
+# prod
+podman compose up --build
+```
+
 ## Linting
 These will be checked by CI
 
