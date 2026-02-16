@@ -49,8 +49,8 @@ func InitConstitution() {
 	startOfDay := time.Date(t.Year(), t.Month(), t.Day(), 0, 0, 0, 0, time.Local)
 	nextMidnight := startOfDay.AddDate(0, 0, 1)
 	fmt.Println(nextMidnight)
-	fmt.Println(nextMidnight.Sub(time.Now()))
-	ticker := time.NewTicker(nextMidnight.Sub(time.Now()))
+	fmt.Println(time.Until(nextMidnight))
+	ticker := time.NewTicker(time.Until(nextMidnight))
 	first := true
 	go func() {
 		for {
