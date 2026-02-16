@@ -47,7 +47,11 @@
           </div>
       {{ else if gt .CanVote 1 }}
         <div id="cannot-vote" class="alert alert-warning alert-dismissible d-flex flex-row align-items-center" role="alert">
-            <h5 class="m-0">You are not eligible to vote in this poll. This is likely because you are not an Active Member, or because you did not meet the gatekeep requirements by the time the poll opened.</h5>
+            <h5 class="m-0">
+                You are not eligible to vote in this poll. This is likely because you are not an Active Member, 
+                or because you did not meet the gatekeep requirements by the time the poll opened. 
+                If you believe this is an error, please contact Evals or Opcomm.
+            </h5>
             <button class="close m-0 ml-3" style="cursor: pointer;" onclick="document.getElementById('cannot-vote').classList.add('d-none');">
               <span class="align-items-center">&times;</span>
             </button>
