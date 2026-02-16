@@ -33,7 +33,7 @@ func Connect() *mongo.Client {
 
 	logging.Logger.WithFields(logrus.Fields{"module": "database", "method": "Connect"}).Info("beginning database connection")
 
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	uri := os.Getenv("VOTE_MONGODB_URI")
@@ -54,7 +54,7 @@ func Connect() *mongo.Client {
 }
 
 func Disconnect() {
-	ctx, cancel := context.WithTimeout(context.TODO(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := Client.Disconnect(ctx); err != nil {
