@@ -1,3 +1,4 @@
 .env*
 vote
 .idea/
+.vscode/
