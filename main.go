@@ -57,6 +57,7 @@ func MakeLinks(s string) template.HTML {
 var oidcClient = OIDCClient{}
 
 func main() {
+	database.Client = database.Connect()
 	r := gin.Default()
 	r.StaticFS("/static", http.Dir("static"))
 	r.SetFuncMap(template.FuncMap{

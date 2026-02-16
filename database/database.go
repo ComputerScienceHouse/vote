@@ -21,7 +21,7 @@ const (
 	Updated UpsertResult = 1
 )
 
-var Client *mongo.Client = Connect()
+var Client *mongo.Client
 var db = ""
 
 func Connect() *mongo.Client {
