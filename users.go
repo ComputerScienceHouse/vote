@@ -72,7 +72,7 @@ func (client *OIDCClient) getAccessToken() int {
 		logging.Logger.WithFields(logrus.Fields{"method": "getAccessToken", "statusCode": resp.StatusCode}).Error(resp.Status)
 		return 0
 	}
-	respData := make(map[string]any)
+	respData := make(map[string]interface{})
 	err = json.NewDecoder(resp.Body).Decode(&respData)
 	if err != nil {
 		logging.Logger.WithFields(logrus.Fields{"method": "getAccessToken"}).Error(err)
