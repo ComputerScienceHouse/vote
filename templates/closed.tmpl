@@ -20,23 +20,18 @@
     {{ template "nav" . }}
     <div class="container main p-5">
       <h2>
-        <div class="d-inline">Active Polls</div>
-        <div class="d-inline float-right">
-          <a class="btn btn-primary" role="button" href="/create">
-            Create Poll
-          </a>
-        </div>
+        <div class="d-inline">Closed Polls</div>
       </h2>
       <br />
       <div>
         <ul class="list-group">
-          {{ range $i, $poll := .Polls }}
+          {{ range $i, $poll := .ClosedPolls }}
           <li>
             <a
               class="list-group-item list-group-item-action"
-              href="/poll/{{ $poll.Id }}"
+              href="/results/{{ $poll.Id }}"
             >
-              <span style="font-size: 1.1rem; white-space: normal; word-wrap: break-word;">
+              <span style="font-size: 1.1rem">
                 {{ $poll.ShortDescription }}
               </span>
 
