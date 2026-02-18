@@ -1,7 +1,15 @@
 version: "3"
 services:
   vote:
-    build: .
+    build:
+      context: .
+      target: build
+    working_dir: /src
+    command: ["go", "run", "./..."]
+    volumes:
+      - type: bind
+        source: .
+        target: /src
     container_name: vote
     depends_on:
       - mongodb
