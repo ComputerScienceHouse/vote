@@ -12,11 +12,44 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">    
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+      .container div.d-none {
+        display: none!important;
+      }
+    </style>
   </head>
   <body>
     {{ template "nav" . }}
 
     <div class="container main p-5">
+      {{ if eq .CanVote 9 }}
+        <div id="already-voted" class="alert alert-info alert-dismissible d-flex flex-row align-items-center" role="alert">
+            <h5 class="m-0">You have already voted in this poll.</h5>
+            <button class="close m-0" style="cursor: pointer;" onclick="document.getElementById('already-voted').classList.add('d-none');">
+              <span class="align-items-center">&times;</span>
+            </button>
+        </div>
+      {{ else if eq .CanVote 1 }}
+          <div id="db-error" class="alert alert-danger alert-dismissible d-flex flex-row align-items-center" role="alert">
+              <h5 class="m-0">There was an error checking your voting eligibility. Try refreshing the page or contacting the RTPs if the issue persists.</h5>
+              <button class="close m-0" style="cursor: pointer;" onclick="document.getElementById('db-error').classList.add('d-none');">
+                <span class="align-items-center">&times;</span>
+              </button>
+          </div>
+      {{ else if gt .CanVote 1 }}
+        <div id="cannot-vote" class="alert alert-warning alert-dismissible d-flex flex-row align-items-center" role="alert">
+            <h5 class="m-0">
+                You are not eligible to vote in this poll. This is likely because you are not an Active Member, 
+                or because you did not meet the gatekeep requirements by the time the poll opened. 
+                If you believe this is an error, please contact Evals or Opcomm.
+            </h5>
+            <button class="close m-0 ml-3" style="cursor: pointer;" onclick="document.getElementById('cannot-vote').classList.add('d-none');">
+              <span class="align-items-center">&times;</span>
+            </button>
+        </div>
+      {{ end }}
+      
       <h2 style="white-space: normal; word-wrap: break-word;">{{ .ShortDescription }}</h2>
       {{ if .LongDescription }}
       <h4>{{ .LongDescription | MakeLinks }}</h4>
@@ -30,6 +63,7 @@
         <h4>Results will be available once the poll closes</h4>
       </div>
       {{ else }}
+      
       {{/* Displays information about required quorum and number of voters */}}
       <div id="quorum-info">
         <h5>Number of Eligible Voters: {{ len .EligibleVoters }}</h5>

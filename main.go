@@ -19,6 +19,7 @@ import (
 	"github.com/computersciencehouse/vote/logging"
 	"github.com/computersciencehouse/vote/sse"
 	"github.com/gin-gonic/gin"
+	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"mvdan.cc/xurls/v2"
@@ -57,6 +58,8 @@ func MakeLinks(s string) template.HTML {
 var oidcClient = OIDCClient{}
 
 func main() {
+	godotenv.Load()
+	database.Client = database.Connect()
 	r := gin.Default()
 	r.StaticFS("/static", http.Dir("static"))
 	r.SetFuncMap(template.FuncMap{
@@ -457,6 +460,7 @@ func main() {
 			"IsOpen":               poll.Open,
 			"IsHidden":             poll.Hidden,
 			"CanModify":            canModify,
+			"CanVote":              canVote(claims.UserInfo, *poll, poll.AllowedUsers),
 			"Username":             claims.UserInfo.Username,
 			"FullName":             claims.UserInfo.FullName,
 			"Gatekeep":             poll.Gatekeep,

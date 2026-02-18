@@ -64,22 +64,22 @@ func (client *OIDCClient) getAccessToken() int {
 	authData.Set("grant_type", "client_credentials")
 	resp, err := htclient.PostForm(cshAuth.ProviderURI+"/protocol/openid-connect/token", authData)
 	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "setupOidcClient"}).Error(err)
+		logging.Logger.WithFields(logrus.Fields{"method": "getAccessToken"}).Error(err)
 		return 0
 	}
 	defer resp.Body.Close()
 	if resp.StatusCode != http.StatusOK {
-		logging.Logger.WithFields(logrus.Fields{"method": "setupOidcClient", "statusCode": resp.StatusCode}).Error(resp.Status)
+		logging.Logger.WithFields(logrus.Fields{"method": "getAccessToken", "statusCode": resp.StatusCode}).Error(resp.Status)
 		return 0
 	}
 	respData := make(map[string]interface{})
 	err = json.NewDecoder(resp.Body).Decode(&respData)
 	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "setupOidcClient"}).Error(err)
+		logging.Logger.WithFields(logrus.Fields{"method": "getAccessToken"}).Error(err)
 		return 0
 	}
 	if respData["error"] != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "setupOidcClient"}).Error(respData)
+		logging.Logger.WithFields(logrus.Fields{"method": "getAccessToken"}).Error(respData)
 		return 0
 	}
 	client.accessToken = respData["access_token"].(string)
@@ -91,19 +91,20 @@ func (client *OIDCClient) GetActiveUsers() []OIDCUser {
 	//active
 	req, err := http.NewRequest("GET", client.providerBase+"/auth/admin/realms/csh/groups/a97a191e-5668-43f5-bc0c-6eefc2b958a7/members", nil)
 	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetActiveUsers"}).Error(err)
 		return nil
 	}
 	req.Header.Add("Authorization", "Bearer "+client.accessToken)
 	resp, err := htclient.Do(req)
 	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "GetAllUsers"}).Error(err)
+		logging.Logger.WithFields(logrus.Fields{"method": "GetActiveUsers"}).Error(err)
 		return nil
 	}
 	defer resp.Body.Close()
 	ret := make([]OIDCUser, 0)
 	err = json.NewDecoder(resp.Body).Decode(&ret)
 	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "GetAllUsers"}).Error(err)
+		logging.Logger.WithFields(logrus.Fields{"method": "GetActiveUsers"}).Error(err)
 		return nil
 	}
 	return ret
@@ -118,6 +119,7 @@ func (client *OIDCClient) GetUserInfo(user *OIDCUser) {
 	req, err := http.NewRequest("GET", client.providerBase+"/auth/admin/realms/csh/users/"+user.Uuid+arg, nil)
 	// also "users/{user-id}/groups"
 	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetUserInfo"}).Error(err)
 		return
 	}
 	req.Header.Add("Authorization", "Bearer "+client.accessToken)
