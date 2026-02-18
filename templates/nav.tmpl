@@ -2,17 +2,35 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
     <div class="container">
         <a class="navbar-brand" href="/">Vote</a>
-        <a class="nav-item nav-link text-light " href="/">Open Polls</a>
-        <a class="nav-item nav-link text-light " href="/closed">Closed Polls</a>
-        <a class="nav-item nav-link text-light " href="/create">Create Poll</a>
-        <div class="nav navbar-nav ml-auto">
-            <div class="navbar-user">
-                <img src="https://profiles.csh.rit.edu/image/{{ .Username }}" />
-                <span class="text-light">{{ .FullName }}</span>
-                <a href="/auth/logout" style="color: #c3c3c3;"><i>(logout)</i></a>
+
+        <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbar"
+                    aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>  
+        <div id="navbar" class="collapse navbar-collapse">
+            <a class="nav-item nav-link text-light" href="/"><i class="bi bi-exclamation-circle-fill"></i> Open Polls</a>
+            <a class="nav-item nav-link text-light" href="/closed"><i class="bi bi-archive-fill"></i> Closed Polls</a>
+            <a class="nav-item nav-link text-light" href="/create"><i class="bi bi-plus-circle-fill"></i> Create Poll</a>
+            <div class="nav navbar-nav ml-auto">
+                <div class="navbar-user">
+                    <img src="https://profiles.csh.rit.edu/image/{{ .Username }}" />
+                    <span class="text-light">{{ .FullName }}</span>
+                    <a href="/auth/logout" style="color: #c3c3c3;"><i>(logout)</i></a>
+                </div>
             </div>
         </div>
     </div>
+
+    <script>
+        // Toggle the navbar when the hamburger menu is clicked
+        document.addEventListener('DOMContentLoaded', () => {
+            let toggler = document.querySelector('.navbar-toggler');
+            let navbar = document.querySelector('#navbar');
+            toggler.addEventListener('click', () => {
+                navbar.classList.toggle('show');
+            });
+        });
+    </script>
 </nav>
 
 {{ end }}
