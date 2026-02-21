@@ -16,18 +16,18 @@ import (
 )
 
 type Poll struct {
-	Id               string    `bson:"_id,omitempty"`
-	CreatedBy        string    `bson:"createdBy"`
-	ShortDescription string    `bson:"shortDescription"`
-	LongDescription  string    `bson:"longDescription"`
-	VoteType         string    `bson:"voteType"`
-	Options          []string  `bson:"options"`
-	OpenedTime       time.Time `bson:"openedTime"`
-	Open             bool      `bson:"open"`
-	Gatekeep         bool      `bson:"gatekeep"`
-	QuorumType       float64   `bson:"quorumType"`
-	AllowedUsers     []string  `bson:"allowedUsers"`
-	AllowWriteIns    bool      `bson:"writeins"`
+	Id            string    `bson:"_id,omitempty"`
+	CreatedBy     string    `bson:"createdBy"`
+	Title         string    `bson:"title"`
+	Description   string    `bson:"description"`
+	VoteType      string    `bson:"voteType"`
+	Options       []string  `bson:"options"`
+	OpenedTime    time.Time `bson:"openedTime"`
+	Open          bool      `bson:"open"`
+	Gatekeep      bool      `bson:"gatekeep"`
+	QuorumType    float64   `bson:"quorumType"`
+	AllowedUsers  []string  `bson:"allowedUsers"`
+	AllowWriteIns bool      `bson:"writeins"`
 
 	// Prevent this poll from having progress displayed
 	// This is important for events like elections where the results shouldn't be visible mid vote

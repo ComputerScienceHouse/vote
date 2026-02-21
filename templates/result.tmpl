@@ -50,9 +50,9 @@
         </div>
       {{ end }}
       
-      <h2 style="white-space: normal; word-wrap: break-word;">{{ .ShortDescription }}</h2>
-      {{ if .LongDescription }}
-      <h4>{{ .LongDescription | MakeLinks }}</h4>
+      <h2 style="white-space: normal; word-wrap: break-word;">{{ .Title }}</h2>
+      {{ if .Description }}
+      <h4>{{ .Description | MakeLinks }}</h4>
       {{ end }}
 
       <br />

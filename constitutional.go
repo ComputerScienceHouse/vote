@@ -106,7 +106,7 @@ func EvaluatePolls() {
 		// check all voters to see if they have voted
 		if poll.AllowedUsers == nil {
 			logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls checkQuorum"}).Error(
-				"Users allowed to vote is nil for \"" + poll.ShortDescription + "\" !! This should not happen!!")
+				"Users allowed to vote is nil for \"" + poll.Title + "\" !! This should not happen!!")
 			continue
 		}
 		for _, user := range poll.AllowedUsers {
@@ -128,7 +128,7 @@ func EvaluatePolls() {
 				oidcClient.GetUserInfo(user)
 				_, _, err = slackData.Client.PostMessage(user.SlackUID,
 					slack.MsgOptionText(
-						"Hello, you have not yet voted on \""+poll.ShortDescription+"\". We have not yet hit quorum"+
+						"Hello, you have not yet voted on \""+poll.Title+"\". We have not yet hit quorum"+
 							" and we need YOU :index_pointing_at_the_viewer: to complete your responsibility as a "+
 							"member of house and vote. \n"+pollLink+"\nThank you!", false))
 				if err != nil {
@@ -144,12 +144,12 @@ func EvaluatePolls() {
 		}
 		// we close the poll here
 		err = poll.Close(ctx)
-		fmt.Println("Time reached, closing poll " + poll.ShortDescription)
+		fmt.Println("Time reached, closing poll " + poll.Title)
 		if err != nil {
 			logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls close"}).Error(err)
 			continue
 		}
-		announceStr := "The vote \"" + poll.ShortDescription + "\" has closed."
+		announceStr := "The vote \"" + poll.Title + "\" has closed."
 		if !poll.Hidden {
 			announceStr += " Check out the results at " + pollLink
 		} else {

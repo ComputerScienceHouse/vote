@@ -204,17 +204,17 @@ func main() {
 		}
 
 		poll := &database.Poll{
-			Id:               "",
-			CreatedBy:        claims.UserInfo.Username,
-			ShortDescription: c.PostForm("shortDescription"),
-			LongDescription:  c.PostForm("longDescription"),
-			VoteType:         database.POLL_TYPE_SIMPLE,
-			OpenedTime:       time.Now(),
-			Open:             true,
-			QuorumType:       float64(quorum),
-			Gatekeep:         c.PostForm("gatekeep") == "true",
-			AllowWriteIns:    c.PostForm("allowWriteIn") == "true",
-			Hidden:           c.PostForm("hidden") == "true",
+			Id:            "",
+			CreatedBy:     claims.UserInfo.Username,
+			Title:         c.PostForm("title"),
+			Description:   c.PostForm("description"),
+			VoteType:      database.POLL_TYPE_SIMPLE,
+			OpenedTime:    time.Now(),
+			Open:          true,
+			QuorumType:    float64(quorum),
+			Gatekeep:      c.PostForm("gatekeep") == "true",
+			AllowWriteIns: c.PostForm("allowWriteIn") == "true",
+			Hidden:        c.PostForm("hidden") == "true",
 		}
 		if c.PostForm("rankedChoice") == "true" {
 			poll.VoteType = database.POLL_TYPE_RANKED
@@ -286,16 +286,16 @@ func main() {
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
 		c.HTML(200, "poll.tmpl", gin.H{
-			"Id":               poll.Id,
-			"ShortDescription": poll.ShortDescription,
-			"LongDescription":  poll.LongDescription,
-			"Options":          poll.Options,
-			"PollType":         poll.VoteType,
-			"RankedMax":        fmt.Sprint(len(poll.Options) + writeInAdj),
-			"AllowWriteIns":    poll.AllowWriteIns,
-			"CanModify":        canModify,
-			"Username":         claims.UserInfo.Username,
-			"FullName":         claims.UserInfo.FullName,
+			"Id":            poll.Id,
+			"Title":         poll.Title,
+			"Description":   poll.Description,
+			"Options":       poll.Options,
+			"PollType":      poll.VoteType,
+			"RankedMax":     fmt.Sprint(len(poll.Options) + writeInAdj),
+			"AllowWriteIns": poll.AllowWriteIns,
+			"CanModify":     canModify,
+			"Username":      claims.UserInfo.Username,
+			"FullName":      claims.UserInfo.FullName,
 		})
 	}))
 
@@ -453,8 +453,8 @@ func main() {
 		votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
 		c.HTML(200, "result.tmpl", gin.H{
 			"Id":                   poll.Id,
-			"ShortDescription":     poll.ShortDescription,
-			"LongDescription":      poll.LongDescription,
+			"Title":                poll.Title,
+			"Description":          poll.Description,
 			"VoteType":             poll.VoteType,
 			"Results":              results,
 			"IsOpen":               poll.Open,
