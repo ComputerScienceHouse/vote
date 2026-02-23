@@ -104,7 +104,7 @@ func main() {
 
 		polls, err := database.GetOpenPolls(c)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		sort.Slice(polls, func(i, j int) bool {
@@ -113,12 +113,12 @@ func main() {
 
 		closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		closedPolls = append(closedPolls, ownedPolls...)
@@ -128,7 +128,7 @@ func main() {
 		})
 		closedPolls = uniquePolls(closedPolls)
 
-		c.HTML(200, "index.tmpl", gin.H{
+		c.HTML(http.StatusOK, "index.tmpl", gin.H{
 			"Polls":    polls,
 			"Username": claims.UserInfo.Username,
 			"FullName": claims.UserInfo.FullName,
@@ -141,12 +141,12 @@ func main() {
 
 		closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		closedPolls = append(closedPolls, ownedPolls...)
@@ -156,7 +156,7 @@ func main() {
 		})
 		closedPolls = uniquePolls(closedPolls)
 
-		c.HTML(200, "closed.tmpl", gin.H{
+		c.HTML(http.StatusOK, "closed.tmpl", gin.H{
 			"ClosedPolls": closedPolls,
 			"Username":    claims.UserInfo.Username,
 			"FullName":    claims.UserInfo.FullName,
@@ -167,14 +167,14 @@ func main() {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
 		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
-			c.HTML(403, "unauthorized.tmpl", gin.H{
+			c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
 			})
 			return
 		}
 
-		c.HTML(200, "create.tmpl", gin.H{
+		c.HTML(http.StatusOK, "create.tmpl", gin.H{
 			"Username": claims.UserInfo.Username,
 			"FullName": claims.UserInfo.FullName,
 			"IsEvals":  isEvals(claims.UserInfo),
@@ -185,7 +185,7 @@ func main() {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
 		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
-			c.HTML(403, "unauthorized.tmpl", gin.H{
+			c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
 			})
@@ -239,7 +239,7 @@ func main() {
 		}
 		if poll.Gatekeep {
 			if !isEvals(claims.UserInfo) {
-				c.HTML(403, "unauthorized.tmpl", gin.H{
+				c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
 					"Username": claims.UserInfo.Username,
 					"FullName": claims.UserInfo.FullName,
 				})
@@ -253,11 +253,11 @@ func main() {
 
 		pollId, err := database.CreatePoll(c, poll)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		c.Redirect(302, "/poll/"+pollId)
+		c.Redirect(http.StatusFound, "/poll/"+pollId)
 	}))
 
 	r.GET("/poll/:id", csh.AuthWrapper(func(c *gin.Context) {
@@ -268,13 +268,13 @@ func main() {
 
 		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		// If the user can't vote, just show them results
 		if canVote(claims.UserInfo, *poll, poll.AllowedUsers) > 0 || !poll.Open {
-			c.Redirect(302, "/results/"+poll.Id)
+			c.Redirect(http.StatusFound, "/results/"+poll.Id)
 			return
 		}
 
@@ -305,18 +305,18 @@ func main() {
 
 		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		if canVote(claims.UserInfo, *poll, poll.AllowedUsers) > 0 || !poll.Open {
-			c.Redirect(302, "/results/"+poll.Id)
+			c.Redirect(http.StatusFound, "/results/"+poll.Id)
 			return
 		}
 
 		pId, err := primitive.ObjectIDFromHex(poll.Id)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -336,7 +336,7 @@ func main() {
 			} else if poll.AllowWriteIns && c.PostForm("option") == "writein" {
 				vote.Option = c.PostForm("writeinOption")
 			} else {
-				c.JSON(400, gin.H{"error": "Invalid Option"})
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Option"})
 				return
 			}
 			database.CastSimpleVote(c, &vote, &voter)
@@ -359,7 +359,7 @@ func main() {
 					continue
 				}
 				if err != nil {
-					c.JSON(400, gin.H{"error": "non-number ranking"})
+					c.JSON(http.StatusBadRequest, gin.H{"error": "non-number ranking"})
 					return
 				}
 
@@ -370,17 +370,17 @@ func main() {
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				for candidate := range vote.Options {
 					if strings.EqualFold(candidate, strings.TrimSpace(c.PostForm("writeinOption"))) {
-						c.JSON(500, gin.H{"error": "Write-in is already an option"})
+						c.JSON(http.StatusBadRequest, gin.H{"error": "Write-in is already an option"})
 						return
 					}
 				}
 				rank, err := strconv.Atoi(c.PostForm("writein"))
 				if err != nil {
-					c.JSON(500, gin.H{"error": "Write-in rank is not numerical"})
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Write-in rank is not numerical"})
 					return
 				}
 				if rank < 1 {
-					c.JSON(500, gin.H{"error": "Write-in rank is not positive"})
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Write-in rank is not positive"})
 					return
 				}
 				vote.Options[c.PostForm("writeinOption")] = rank
@@ -392,12 +392,12 @@ func main() {
 			for _, rank := range vote.Options {
 				if rank > 0 && rank <= maxNum {
 					if voted[rank-1] {
-						c.JSON(400, gin.H{"error": "You ranked two or more candidates at the same level"})
+						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level"})
 						return
 					}
 					voted[rank-1] = true
 				} else {
-					c.JSON(400, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", maxNum)})
+					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", maxNum)})
 					return
 				}
 			}
@@ -405,13 +405,13 @@ func main() {
 			rankedCandidates := len(vote.Options)
 			for _, voteOpt := range vote.Options {
 				if voteOpt > rankedCandidates {
-					c.JSON(400, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
 					return
 				}
 			}
 			database.CastRankedVote(c, &vote, &voter)
 		} else {
-			c.JSON(500, gin.H{"error": "Unknown Poll Type"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unknown Poll Type"})
 			return
 		}
 
@@ -427,7 +427,7 @@ func main() {
 			}
 		}
 
-		c.Redirect(302, "/results/"+poll.Id)
+		c.Redirect(http.StatusFound, "/results/"+poll.Id)
 	}))
 
 	r.GET("/results/:id", csh.AuthWrapper(func(c *gin.Context) {
@@ -438,20 +438,20 @@ func main() {
 
 		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		results, err := poll.GetResult(c)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
 		votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
-		c.HTML(200, "result.tmpl", gin.H{
+		c.HTML(http.StatusOK, "result.tmpl", gin.H{
 			"Id":                   poll.Id,
 			"Title":                poll.Title,
 			"Description":          poll.Description,
@@ -476,18 +476,18 @@ func main() {
 
 		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
 		if poll.CreatedBy != claims.UserInfo.Username {
-			c.JSON(403, gin.H{"error": "Only the creator can hide a poll result"})
+			c.JSON(http.StatusForbidden, gin.H{"error": "Only the creator can hide a poll result"})
 			return
 		}
 
 		err = poll.Hide(c)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		pId, _ := primitive.ObjectIDFromHex(poll.Id)
@@ -500,11 +500,11 @@ func main() {
 		}
 		err = database.WriteAction(c, &action)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		c.Redirect(302, "/results/"+poll.Id)
+		c.Redirect(http.StatusFound, "/results/"+poll.Id)
 	}))
 
 	r.POST("/poll/:id/close", csh.AuthWrapper(func(c *gin.Context) {
@@ -515,7 +515,7 @@ func main() {
 
 		poll, err := database.GetPoll(c, c.Param("id"))
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
@@ -527,14 +527,14 @@ func main() {
 		if poll.CreatedBy != claims.UserInfo.Username {
 			if containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") {
 			} else {
-				c.JSON(403, gin.H{"error": "You cannot end this poll."})
+				c.JSON(http.StatusForbidden, gin.H{"error": "You cannot end this poll."})
 				return
 			}
 		}
 
 		err = poll.Close(c)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		pId, _ := primitive.ObjectIDFromHex(poll.Id)
@@ -547,11 +547,11 @@ func main() {
 		}
 		err = database.WriteAction(c, &action)
 		if err != nil {
-			c.JSON(500, gin.H{"error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		c.Redirect(302, "/results/"+poll.Id)
+		c.Redirect(http.StatusFound, "/results/"+poll.Id)
 	}))
 
 	r.GET("/stream/:topic", csh.AuthWrapper(broker.ServeHTTP))
