@@ -2,7 +2,10 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"os"
 	"strings"
 	"time"
@@ -71,16 +74,27 @@ func InitConstitution() {
 
 // GetEligibleVoters returns a string slice of usernames of eligible voters
 func GetEligibleVoters() []string {
-	ret := make([]string, 0)
-	allactive := oidcClient.GetActiveUsers()
-	//todo: figure out why this is slow as FORK
-	for _, a := range allactive {
-		oidcClient.GetUserGatekeep(&a)
-		if a.Gatekeep {
-			ret = append(ret, a.Username)
-		}
+	htclient := &http.Client{}
+	req, err := http.NewRequest("GET", CONDITIONAL_GATEKEEP_URL, nil)
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetUserGatekeep"}).Error(err)
+		return nil
 	}
-	return ret
+	req.Header.Add("X-VOTE-TOKEN", VOTE_TOKEN)
+	resp, err := htclient.Do(req)
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetUserGatekeep"}).Error(err)
+		return nil
+	}
+	defer resp.Body.Close()
+	b, _ := io.ReadAll(resp.Body)
+	if strings.Contains(string(b), "Users") {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetUserGatekeep"}).Error("Conditional Gatekeep token is incorrect")
+		return nil
+	}
+	res := make([]string, 0)
+	err = json.Unmarshal(b, &res)
+	return res
 }
 
 func EvaluatePolls() {
