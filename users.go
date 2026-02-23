@@ -154,7 +154,7 @@ func (client *OIDCClient) GetUserInfo(user *OIDCUser) {
 
 func (client *OIDCClient) GetUserGatekeep(user *OIDCUser) {
 	htclient := &http.Client{}
-	req, err := http.NewRequest("GET", CONDITIONAL_GATEKEEP_URL+user.Username, nil)
+	req, err := http.NewRequest("GET", CONDITIONAL_GATEKEEP_URL+"/"+user.Username, nil)
 	if err != nil {
 		logging.Logger.WithFields(logrus.Fields{"method": "GetUserGatekeep"}).Error(err)
 		return
