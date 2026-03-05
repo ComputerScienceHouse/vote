@@ -520,8 +520,7 @@ func main() {
 		}
 
 		if poll.CreatedBy != claims.UserInfo.Username {
-			if slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") {
-			} else {
+			if !(slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard")) {
 				c.JSON(http.StatusForbidden, gin.H{"error": "You cannot end this poll."})
 				return
 			}
