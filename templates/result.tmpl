@@ -69,7 +69,7 @@
         <h5>Number of Eligible Voters: {{ len .EligibleVoters }}</h5>
         <div id="votes-needed-for-quorum">
           {{/* This works currently because quorum type can only be set if gatekeep is required */}}
-          {{ if not .Gatekeep }}
+          {{ if not (len .EligibleVoters) }}
             <h5>No quorum required for this poll.</h5>
           {{ else }}
             <h5>Quorum Type: {{ .Quorum }}%</h5>

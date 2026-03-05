@@ -32,6 +32,7 @@ VOTE_SLACK_BOT_TOKEN=
 ### Dev Overrides
 `DEV_DISABLE_ACTIVE_FILTERS="true"` will disable the requirements that you be active to vote
 `DEV_FORCE_IS_EVALS="true"` will force vote to treat all users as the Evals director
+`DEV_FORCE_IS_CHAIR="true"` will force vote to treat all users as the Chairperson
 
 ## Linting
 These will be checked by CI

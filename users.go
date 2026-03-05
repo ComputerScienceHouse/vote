@@ -110,6 +110,30 @@ func (client *OIDCClient) GetActiveUsers() []OIDCUser {
 	return ret
 }
 
+func (client *OIDCClient) GetEBoard() []OIDCUser {
+	htclient := &http.Client{}
+	//active
+	req, err := http.NewRequest("GET", client.providerBase+"/auth/admin/realms/csh/groups/47dd1a94-853c-426d-b181-6d0714074892/members", nil)
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetEBoard"}).Error(err)
+		return nil
+	}
+	req.Header.Add("Authorization", "Bearer "+client.accessToken)
+	resp, err := htclient.Do(req)
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetEBoard"}).Error(err)
+		return nil
+	}
+	defer resp.Body.Close()
+	ret := make([]OIDCUser, 0)
+	err = json.NewDecoder(resp.Body).Decode(&ret)
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "GetEBoard"}).Error(err)
+		return nil
+	}
+	return ret
+}
+
 func (client *OIDCClient) GetUserInfo(user *OIDCUser) {
 	htclient := &http.Client{}
 	arg := ""

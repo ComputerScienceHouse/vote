@@ -30,19 +30,20 @@ var CONDITIONAL_GATEKEEP_URL = os.Getenv("VOTE_CONDITIONAL_URL")
 var VOTE_HOST = os.Getenv("VOTE_HOST")
 
 // Dev mode flags
-var DEV_DISABLE_ACTIVE_FILTERS bool = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "true"
-var DEV_FORCE_IS_EVALS bool = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
+var DEV_DISABLE_ACTIVE_FILTERS = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "true"
+var DEV_FORCE_IS_EVALS = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
+var DEV_FORCE_IS_CHAIR = os.Getenv("DEV_FORCE_IS_CHAIR") == "true"
 
 func inc(x int) string {
 	return strconv.Itoa(x + 1)
 }
 
-// Gets the number of people eligible to vote in a poll
+// GetVoterCount Gets the number of people eligible to vote in a poll
 func GetVoterCount(poll database.Poll) int {
 	return len(poll.AllowedUsers)
 }
 
-// Calculates the number of votes required for quorum in a poll
+// CalculateQuorum Calculates the number of votes required for quorum in a poll
 func CalculateQuorum(poll database.Poll) int {
 	voterCount := GetVoterCount(poll)
 	return int(math.Ceil(float64(voterCount) * poll.QuorumType))
@@ -110,23 +111,6 @@ func main() {
 		sort.Slice(polls, func(i, j int) bool {
 			return polls[i].Id > polls[j].Id
 		})
-
-		closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		closedPolls = append(closedPolls, ownedPolls...)
-
-		sort.Slice(closedPolls, func(i, j int) bool {
-			return closedPolls[i].Id > closedPolls[j].Id
-		})
-		closedPolls = uniquePolls(closedPolls)
 
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{
 			"Polls":    polls,
@@ -216,8 +200,19 @@ func main() {
 			AllowWriteIns: c.PostForm("allowWriteIn") == "true",
 			Hidden:        c.PostForm("hidden") == "true",
 		}
-		if c.PostForm("rankedChoice") == "true" {
+		switch c.PostForm("pollType") {
+		case "rankedChoice":
 			poll.VoteType = database.POLL_TYPE_RANKED
+		case "eboard":
+			eboard := oidcClient.GetEBoard()
+			var usernames []string
+			for _, member := range eboard {
+				usernames = append(usernames, member.Username)
+			}
+			poll.AllowedUsers = usernames
+			poll.AllowWriteIns = false
+			poll.Hidden = true
+			poll.Gatekeep = false
 		}
 
 		switch c.PostForm("options") {
@@ -229,7 +224,7 @@ func main() {
 			poll.Options = []string{}
 			for opt := range strings.SplitSeq(c.PostForm("customOptions"), ",") {
 				poll.Options = append(poll.Options, strings.TrimSpace(opt))
-				if !containsString(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
+				if !slices.Contains(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
 					poll.Options = append(poll.Options, "Abstain")
 				}
 			}
@@ -283,7 +278,7 @@ func main() {
 			writeInAdj = 1
 		}
 
-		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
+		canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
 		c.HTML(200, "poll.tmpl", gin.H{
 			"Id":            poll.Id,
@@ -448,7 +443,7 @@ func main() {
 			return
 		}
 
-		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
+		canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
 		votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
 		c.HTML(http.StatusOK, "result.tmpl", gin.H{
@@ -525,7 +520,7 @@ func main() {
 		}
 
 		if poll.CreatedBy != claims.UserInfo.Username {
-			if containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") {
+			if slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") {
 			} else {
 				c.JSON(http.StatusForbidden, gin.H{"error": "You cannot end this poll."})
 				return
@@ -563,7 +558,11 @@ func main() {
 
 // isEvals determines if the current user is evals, allowing for a dev mode override
 func isEvals(user cshAuth.CSHUserInfo) bool {
-	return DEV_FORCE_IS_EVALS || containsString(user.Groups, "eboard-evaluations")
+	return DEV_FORCE_IS_EVALS || slices.Contains(user.Groups, "eboard-evaluations")
+}
+
+func isChair(user cshAuth.CSHUserInfo) bool {
+	return DEV_FORCE_IS_CHAIR || slices.Contains(user.Groups, "eboard-chairman")
 }
 
 // canVote determines whether a user can cast a vote.
@@ -613,15 +612,6 @@ func containsPoll(polls []*database.Poll, poll *database.Poll) bool {
 func hasOption(poll *database.Poll, option string) bool {
 	for _, opt := range poll.Options {
 		if opt == option {
-			return true
-		}
-	}
-	return false
-}
-
-func containsString(arr []string, val string) bool {
-	for _, a := range arr {
-		if a == val {
 			return true
 		}
 	}
