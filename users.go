@@ -87,48 +87,32 @@ func (client *OIDCClient) getAccessToken() int {
 }
 
 func (client *OIDCClient) GetActiveUsers() []OIDCUser {
-	htclient := &http.Client{}
-	//active
-	req, err := http.NewRequest("GET", client.providerBase+"/auth/admin/realms/csh/groups/a97a191e-5668-43f5-bc0c-6eefc2b958a7/members", nil)
-	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "GetActiveUsers"}).Error(err)
-		return nil
-	}
-	req.Header.Add("Authorization", "Bearer "+client.accessToken)
-	resp, err := htclient.Do(req)
-	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "GetActiveUsers"}).Error(err)
-		return nil
-	}
-	defer resp.Body.Close()
-	ret := make([]OIDCUser, 0)
-	err = json.NewDecoder(resp.Body).Decode(&ret)
-	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "GetActiveUsers"}).Error(err)
-		return nil
-	}
-	return ret
+	return client.GetOIDCGroup("a97a191e-5668-43f5-bc0c-6eefc2b958a7")
 }
 
 func (client *OIDCClient) GetEBoard() []OIDCUser {
+	return client.GetOIDCGroup("47dd1a94-853c-426d-b181-6d0714074892")
+}
+
+func (client *OIDCClient) GetOIDCGroup(groupID string) []OIDCUser {
 	htclient := &http.Client{}
 	//active
-	req, err := http.NewRequest("GET", client.providerBase+"/auth/admin/realms/csh/groups/47dd1a94-853c-426d-b181-6d0714074892/members", nil)
+	req, err := http.NewRequest("GET", client.providerBase+"/auth/admin/realms/csh/groups/"+groupID+"/members", nil)
 	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "GetEBoard"}).Error(err)
+		logging.Logger.WithFields(logrus.Fields{"method": "GetOIDCGroup"}).Error(err)
 		return nil
 	}
 	req.Header.Add("Authorization", "Bearer "+client.accessToken)
 	resp, err := htclient.Do(req)
 	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "GetEBoard"}).Error(err)
+		logging.Logger.WithFields(logrus.Fields{"method": "GetOIDCGroup"}).Error(err)
 		return nil
 	}
 	defer resp.Body.Close()
 	ret := make([]OIDCUser, 0)
 	err = json.NewDecoder(resp.Body).Decode(&ret)
 	if err != nil {
-		logging.Logger.WithFields(logrus.Fields{"method": "GetEBoard"}).Error(err)
+		logging.Logger.WithFields(logrus.Fields{"method": "GetOIDCGroup"}).Error(err)
 		return nil
 	}
 	return ret
