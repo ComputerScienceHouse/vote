@@ -404,6 +404,14 @@ func main() {
 					return
 				}
 			}
+
+			// Make sure vote is not empty
+			if len(vote.Options) == 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "You did not rank any options"})
+				return
+			}
+
+			// Submit Vote
 			database.CastRankedVote(c, &vote, &voter)
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unknown Poll Type"})
