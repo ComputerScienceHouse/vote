@@ -25,6 +25,19 @@ import (
 	"mvdan.cc/xurls/v2"
 )
 
+type TemplateName string
+
+const (
+	Closed       TemplateName = "closed.tmpl"
+	Create       TemplateName = "create.tmpl"
+	Hidden       TemplateName = "hidden.tmpl"
+	Index        TemplateName = "index.tmpl"
+	Nav          TemplateName = "nav.tmpl"
+	Poll         TemplateName = "poll.tmpl"
+	Result       TemplateName = "result.tmpl"
+	Unauthorized TemplateName = "unauthorized.tmpl"
+)
+
 var VOTE_TOKEN = os.Getenv("VOTE_TOKEN")
 var CONDITIONAL_GATEKEEP_URL = os.Getenv("VOTE_CONDITIONAL_URL")
 var VOTE_HOST = os.Getenv("VOTE_HOST")
@@ -33,28 +46,6 @@ var VOTE_HOST = os.Getenv("VOTE_HOST")
 var DEV_DISABLE_ACTIVE_FILTERS = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "true"
 var DEV_FORCE_IS_EVALS = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
 var DEV_FORCE_IS_CHAIR = os.Getenv("DEV_FORCE_IS_CHAIR") == "true"
-
-func inc(x int) string {
-	return strconv.Itoa(x + 1)
-}
-
-// GetVoterCount Gets the number of people eligible to vote in a poll
-func GetVoterCount(poll database.Poll) int {
-	return len(poll.AllowedUsers)
-}
-
-// CalculateQuorum Calculates the number of votes required for quorum in a poll
-func CalculateQuorum(poll database.Poll) int {
-	voterCount := GetVoterCount(poll)
-	return int(math.Ceil(float64(voterCount) * poll.QuorumType))
-}
-
-func MakeLinks(s string) template.HTML {
-	rx := xurls.Strict()
-	s = template.HTMLEscapeString(s)
-	safe := rx.ReplaceAllString(s, `<a href="$0" target="_blank">$0</a>`)
-	return template.HTML(safe)
-}
 
 var oidcClient = OIDCClient{}
 
@@ -96,69 +87,22 @@ func main() {
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
 
-	// TODO: change ALL the response codes to use http.(actual description)
-	r.GET("/", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-		// This is intentionally left unprotected
-		// A user may be unable to vote but should still be able to see a list of polls
+	r.GET("/", csh.AuthWrapper(getHomepage))
 
-		polls, err := database.GetOpenPolls(c)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		sort.Slice(polls, func(i, j int) bool {
-			return polls[i].Id > polls[j].Id
-		})
-
-		c.HTML(http.StatusOK, "index.tmpl", gin.H{
-			"Polls":    polls,
-			"Username": claims.UserInfo.Username,
-			"FullName": claims.UserInfo.FullName,
-		})
-	}))
-
-	r.GET("/closed", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-
-		closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		closedPolls = append(closedPolls, ownedPolls...)
-
-		sort.Slice(closedPolls, func(i, j int) bool {
-			return closedPolls[i].Id > closedPolls[j].Id
-		})
-		closedPolls = uniquePolls(closedPolls)
-
-		c.HTML(http.StatusOK, "closed.tmpl", gin.H{
-			"ClosedPolls": closedPolls,
-			"Username":    claims.UserInfo.Username,
-			"FullName":    claims.UserInfo.FullName,
-		})
-	}))
+	r.GET("/closed", csh.AuthWrapper(getClosedPollsPage))
 
 	r.GET("/create", csh.AuthWrapper(func(c *gin.Context) {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
 		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
-			c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
+			c.HTML(http.StatusForbidden, string(Unauthorized), gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
 			})
 			return
 		}
 
-		c.HTML(http.StatusOK, "create.tmpl", gin.H{
+		c.HTML(http.StatusOK, string(Create), gin.H{
 			"Username": claims.UserInfo.Username,
 			"FullName": claims.UserInfo.FullName,
 			"IsEvals":  isEvals(claims.UserInfo),
@@ -169,7 +113,7 @@ func main() {
 		cl, _ := c.Get("cshauth")
 		claims := cl.(cshAuth.CSHClaims)
 		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
-			c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
+			c.HTML(http.StatusForbidden, string(Unauthorized), gin.H{
 				"Username": claims.UserInfo.Username,
 				"FullName": claims.UserInfo.FullName,
 			})
@@ -234,7 +178,7 @@ func main() {
 		}
 		if poll.Gatekeep {
 			if !isEvals(claims.UserInfo) {
-				c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
+				c.HTML(http.StatusForbidden, string(Unauthorized), gin.H{
 					"Username": claims.UserInfo.Username,
 					"FullName": claims.UserInfo.FullName,
 				})
@@ -280,7 +224,7 @@ func main() {
 
 		canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
-		c.HTML(200, "poll.tmpl", gin.H{
+		c.HTML(200, string(Poll), gin.H{
 			"Id":            poll.Id,
 			"Title":         poll.Title,
 			"Description":   poll.Description,
@@ -446,7 +390,7 @@ func main() {
 		canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
 		votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
-		c.HTML(http.StatusOK, "result.tmpl", gin.H{
+		c.HTML(http.StatusOK, string(Result), gin.H{
 			"Id":                   poll.Id,
 			"Title":                poll.Title,
 			"Description":          poll.Description,
@@ -555,40 +499,126 @@ func main() {
 	r.Run()
 }
 
-// isEvals determines if the current user is evals, allowing for a dev mode override
+// getHomepage Constructs and displays the home page to the user
+func getHomepage(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+	// This is intentionally left unprotected
+	// A user may be unable to vote but should still be able to see a list of polls
+
+	polls, err := database.GetOpenPolls(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	sort.Slice(polls, func(i, j int) bool {
+		return polls[i].Id > polls[j].Id
+	})
+
+	c.HTML(http.StatusOK, string(Index), gin.H{
+		"Polls":    polls,
+		"Username": claims.UserInfo.Username,
+		"FullName": claims.UserInfo.FullName,
+	})
+}
+
+// getClosedPollsPage Constructs and displays the closed polls page to the user
+func getClosedPollsPage(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+
+	closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	closedPolls = append(closedPolls, ownedPolls...)
+
+	sort.Slice(closedPolls, func(i, j int) bool {
+		return closedPolls[i].Id > closedPolls[j].Id
+	})
+	closedPolls = uniquePolls(closedPolls)
+
+	c.HTML(http.StatusOK, string(Closed), gin.H{
+		"ClosedPolls": closedPolls,
+		"Username":    claims.UserInfo.Username,
+		"FullName":    claims.UserInfo.FullName,
+	})
+}
+
+// GetVoterCount Gets the number of people eligible to vote in a poll
+func GetVoterCount(poll database.Poll) int {
+	return len(poll.AllowedUsers)
+}
+
+// CalculateQuorum Calculates the number of votes required for quorum in a poll
+func CalculateQuorum(poll database.Poll) int {
+	voterCount := GetVoterCount(poll)
+	return int(math.Ceil(float64(voterCount) * poll.QuorumType))
+}
+
+func MakeLinks(s string) template.HTML {
+	rx := xurls.Strict()
+	s = template.HTMLEscapeString(s)
+	safe := rx.ReplaceAllString(s, `<a href="$0" target="_blank">$0</a>`)
+	return template.HTML(safe)
+}
+
+func inc(x int) string {
+	return strconv.Itoa(x + 1)
+}
+
+// isEvals Determines if the current user is evals, allowing for a dev mode override
 func isEvals(user cshAuth.CSHUserInfo) bool {
 	return DEV_FORCE_IS_EVALS || slices.Contains(user.Groups, "eboard-evaluations")
 }
 
+// isChair Determines if the current user is chair, allowing for a dev mode override
 func isChair(user cshAuth.CSHUserInfo) bool {
 	return DEV_FORCE_IS_CHAIR || slices.Contains(user.Groups, "eboard-chairman")
 }
 
-// canVote determines whether a user can cast a vote.
+// canVote Determines whether a user can cast a vote.
 //
-// returns an integer value: 0 is success, 1 is database error, 3 is not active, 4 is gatekept, 9 is already voted
-// TODO: use the return value to influence messages shown on results page
+//	0 -> Allowed to vote
+//	1 -> Database error
+//	3 -> Not active
+//	4 -> Gatekept
+//	9 -> Already voted
 func canVote(user cshAuth.CSHUserInfo, poll database.Poll, allowedUsers []string) int {
 	// always false if user is not active
 	if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(user.Groups, "active") {
 		return 3
 	}
+
 	voted, err := database.HasVoted(context.Background(), poll.Id, user.Username)
+
 	if err != nil {
 		logging.Logger.WithFields(logrus.Fields{"method": "canVote"}).Error(err)
 		return 1
 	}
+
 	if voted {
 		return 9
 	}
-	if poll.Gatekeep { //if gatekeep is enabled, but they aren't allowed to vote in the poll, false
+
+	// If gatekeep is enabled, but they aren't allowed to vote in the poll, false
+	if poll.Gatekeep {
 		if !slices.Contains(allowedUsers, user.Username) {
 			return 4
 		}
-	} //otherwise true
+	}
+
+	// Otherwise true
 	return 0
 }
 
+// uniquePolls Retrieves a list of all unique polls that exist in the database
 func uniquePolls(polls []*database.Poll) []*database.Poll {
 	var unique []*database.Poll
 	for _, poll := range polls {
@@ -599,6 +629,7 @@ func uniquePolls(polls []*database.Poll) []*database.Poll {
 	return unique
 }
 
+// containsPoll Determines whether a poll with a specific id exists in the database
 func containsPoll(polls []*database.Poll, poll *database.Poll) bool {
 	for _, p := range polls {
 		if p.Id == poll.Id {
@@ -608,6 +639,7 @@ func containsPoll(polls []*database.Poll, poll *database.Poll) bool {
 	return false
 }
 
+// hasOption Determines whether a particular poll contains a specified option
 func hasOption(poll *database.Poll, option string) bool {
 	for _, opt := range poll.Options {
 		if opt == option {
