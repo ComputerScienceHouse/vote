@@ -346,6 +346,7 @@ func main() {
 				UserId: claims.UserInfo.Username,
 			}
 
+			// Populate vote
 			for _, option := range poll.Options {
 				optionRankStr := c.PostForm(option)
 				optionRank, err := strconv.Atoi(optionRankStr)
@@ -360,7 +361,6 @@ func main() {
 
 				vote.Options[option] = optionRank
 			}
-
 			// process write-in
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				for candidate := range vote.Options {
@@ -380,10 +380,18 @@ func main() {
 				}
 				vote.Options[c.PostForm("writeinOption")] = rank
 			}
+			// Perform checks, vote does not change beyond this
 
 			maxNum := len(vote.Options)
 			voted := make([]bool, maxNum)
 
+			// Make sure vote is not empty
+			if len(vote.Options) == 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "You did not rank any options"})
+				return
+			}
+
+			// Duplicate ranks and range check
 			for _, rank := range vote.Options {
 				if rank > 0 && rank <= maxNum {
 					if voted[rank-1] {
@@ -397,18 +405,13 @@ func main() {
 				}
 			}
 
+			// Too large of a rank
 			rankedCandidates := len(vote.Options)
 			for _, voteOpt := range vote.Options {
 				if voteOpt > rankedCandidates {
 					c.JSON(http.StatusBadRequest, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
 					return
 				}
-			}
-
-			// Make sure vote is not empty
-			if len(vote.Options) == 0 {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "You did not rank any options"})
-				return
 			}
 
 			// Submit Vote
