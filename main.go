@@ -382,33 +382,32 @@ func main() {
 			}
 			// Perform checks, vote does not change beyond this
 
-			maxNum := len(vote.Options)
-			voted := make([]bool, maxNum)
+			optionCount := len(vote.Options)
+			voted := make([]bool, optionCount)
 
 			// Make sure vote is not empty
-			if len(vote.Options) == 0 {
+			if optionCount == 0 {
 				c.JSON(http.StatusBadRequest, gin.H{"error": "You did not rank any options"})
 				return
 			}
 
 			// Duplicate ranks and range check
 			for _, rank := range vote.Options {
-				if rank > 0 && rank <= maxNum {
+				if rank > 0 && rank <= optionCount {
 					if voted[rank-1] {
 						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level"})
 						return
 					}
 					voted[rank-1] = true
 				} else {
-					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", maxNum)})
+					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", optionCount)})
 					return
 				}
 			}
 
 			// Too large of a rank
-			rankedCandidates := len(vote.Options)
 			for _, voteOpt := range vote.Options {
-				if voteOpt > rankedCandidates {
+				if voteOpt > optionCount {
 					c.JSON(http.StatusBadRequest, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
 					return
 				}
