@@ -25,6 +25,20 @@ import (
 	"mvdan.cc/xurls/v2"
 )
 
+// TemplateName stores the file name of each template file
+type TemplateName string
+
+const (
+	Closed       TemplateName = "closed.tmpl"
+	Create       TemplateName = "create.tmpl"
+	Hidden       TemplateName = "hidden.tmpl"
+	Index        TemplateName = "index.tmpl"
+	Nav          TemplateName = "nav.tmpl"
+	Poll         TemplateName = "poll.tmpl"
+	Result       TemplateName = "result.tmpl"
+	Unauthorized TemplateName = "unauthorized.tmpl"
+)
+
 var VOTE_TOKEN = os.Getenv("VOTE_TOKEN")
 var CONDITIONAL_GATEKEEP_URL = os.Getenv("VOTE_CONDITIONAL_URL")
 var VOTE_HOST = os.Getenv("VOTE_HOST")
@@ -34,29 +48,9 @@ var DEV_DISABLE_ACTIVE_FILTERS = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "tru
 var DEV_FORCE_IS_EVALS = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
 var DEV_FORCE_IS_CHAIR = os.Getenv("DEV_FORCE_IS_CHAIR") == "true"
 
-func inc(x int) string {
-	return strconv.Itoa(x + 1)
-}
-
-// GetVoterCount Gets the number of people eligible to vote in a poll
-func GetVoterCount(poll database.Poll) int {
-	return len(poll.AllowedUsers)
-}
-
-// CalculateQuorum Calculates the number of votes required for quorum in a poll
-func CalculateQuorum(poll database.Poll) int {
-	voterCount := GetVoterCount(poll)
-	return int(math.Ceil(float64(voterCount) * poll.QuorumType))
-}
-
-func MakeLinks(s string) template.HTML {
-	rx := xurls.Strict()
-	s = template.HTMLEscapeString(s)
-	safe := rx.ReplaceAllString(s, `<a href="$0" target="_blank">$0</a>`)
-	return template.HTML(safe)
-}
-
 var oidcClient = OIDCClient{}
+
+var broker sse.Broker
 
 func main() {
 	godotenv.Load()
@@ -87,7 +81,6 @@ func main() {
 	if DEV_DISABLE_ACTIVE_FILTERS {
 		logging.Logger.WithFields(logrus.Fields{"method": "main init"}).Warning("Dev disable active filters is set!")
 	}
-
 	if DEV_FORCE_IS_EVALS {
 		logging.Logger.WithFields(logrus.Fields{"method": "main init"}).Warning("Dev force evals is set!")
 	}
@@ -96,458 +89,15 @@ func main() {
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
 
-	// TODO: change ALL the response codes to use http.(actual description)
-	r.GET("/", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-		// This is intentionally left unprotected
-		// A user may be unable to vote but should still be able to see a list of polls
-
-		polls, err := database.GetOpenPolls(c)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		sort.Slice(polls, func(i, j int) bool {
-			return polls[i].Id > polls[j].Id
-		})
-
-		c.HTML(http.StatusOK, "index.tmpl", gin.H{
-			"Polls":    polls,
-			"Username": claims.UserInfo.Username,
-			"FullName": claims.UserInfo.FullName,
-		})
-	}))
-
-	r.GET("/closed", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-
-		closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		closedPolls = append(closedPolls, ownedPolls...)
-
-		sort.Slice(closedPolls, func(i, j int) bool {
-			return closedPolls[i].Id > closedPolls[j].Id
-		})
-		closedPolls = uniquePolls(closedPolls)
-
-		c.HTML(http.StatusOK, "closed.tmpl", gin.H{
-			"ClosedPolls": closedPolls,
-			"Username":    claims.UserInfo.Username,
-			"FullName":    claims.UserInfo.FullName,
-		})
-	}))
-
-	r.GET("/create", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
-			c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
-				"Username": claims.UserInfo.Username,
-				"FullName": claims.UserInfo.FullName,
-			})
-			return
-		}
-
-		c.HTML(http.StatusOK, "create.tmpl", gin.H{
-			"Username": claims.UserInfo.Username,
-			"FullName": claims.UserInfo.FullName,
-			"IsEvals":  isEvals(claims.UserInfo),
-		})
-	}))
-
-	r.POST("/create", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-		if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
-			c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
-				"Username": claims.UserInfo.Username,
-				"FullName": claims.UserInfo.FullName,
-			})
-			return
-		}
-
-		quorumType := c.PostForm("quorumType")
-		var quorum float64
-		switch quorumType {
-		case "12":
-			quorum = 1.0 / 2.0
-		case "23":
-			quorum = 2.0 / 3.0
-		default:
-			quorum = 1.0 / 2.0
-		}
-
-		poll := &database.Poll{
-			Id:            "",
-			CreatedBy:     claims.UserInfo.Username,
-			Title:         c.PostForm("title"),
-			Description:   c.PostForm("description"),
-			VoteType:      database.POLL_TYPE_SIMPLE,
-			OpenedTime:    time.Now(),
-			Open:          true,
-			QuorumType:    float64(quorum),
-			Gatekeep:      c.PostForm("gatekeep") == "true",
-			AllowWriteIns: c.PostForm("allowWriteIn") == "true",
-			Hidden:        c.PostForm("hidden") == "true",
-		}
-		switch c.PostForm("pollType") {
-		case "rankedChoice":
-			poll.VoteType = database.POLL_TYPE_RANKED
-		case "eboard":
-			eboard := oidcClient.GetEBoard()
-			var usernames []string
-			for _, member := range eboard {
-				usernames = append(usernames, member.Username)
-			}
-			poll.AllowedUsers = usernames
-			poll.AllowWriteIns = false
-			poll.Hidden = true
-			poll.Gatekeep = false
-		}
-
-		switch c.PostForm("options") {
-		case "pass-fail-conditional":
-			poll.Options = []string{"Pass", "Fail/Conditional", "Abstain"}
-		case "fail-conditional":
-			poll.Options = []string{"Fail", "Conditional", "Abstain"}
-		case "custom":
-			poll.Options = []string{}
-			for opt := range strings.SplitSeq(c.PostForm("customOptions"), ",") {
-				poll.Options = append(poll.Options, strings.TrimSpace(opt))
-				if !slices.Contains(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
-					poll.Options = append(poll.Options, "Abstain")
-				}
-			}
-		case "pass-fail":
-		default:
-			poll.Options = []string{"Pass", "Fail", "Abstain"}
-		}
-		if poll.Gatekeep {
-			if !isEvals(claims.UserInfo) {
-				c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
-					"Username": claims.UserInfo.Username,
-					"FullName": claims.UserInfo.FullName,
-				})
-				return
-			}
-			poll.AllowedUsers = GetEligibleVoters()
-			for user := range strings.SplitSeq(c.PostForm("waivedUsers"), ",") {
-				poll.AllowedUsers = append(poll.AllowedUsers, strings.TrimSpace(user))
-			}
-		}
-
-		pollId, err := database.CreatePoll(c, poll)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.Redirect(http.StatusFound, "/poll/"+pollId)
-	}))
-
-	r.GET("/poll/:id", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-		// This is intentionally left unprotected
-		// We will check if a user can vote and redirect them to results if not later
-
-		poll, err := database.GetPoll(c, c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		// If the user can't vote, just show them results
-		if canVote(claims.UserInfo, *poll, poll.AllowedUsers) > 0 || !poll.Open {
-			c.Redirect(http.StatusFound, "/results/"+poll.Id)
-			return
-		}
-
-		writeInAdj := 0
-		if poll.AllowWriteIns {
-			writeInAdj = 1
-		}
-
-		canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
-
-		c.HTML(200, "poll.tmpl", gin.H{
-			"Id":            poll.Id,
-			"Title":         poll.Title,
-			"Description":   poll.Description,
-			"Options":       poll.Options,
-			"PollType":      poll.VoteType,
-			"RankedMax":     fmt.Sprint(len(poll.Options) + writeInAdj),
-			"AllowWriteIns": poll.AllowWriteIns,
-			"CanModify":     canModify,
-			"Username":      claims.UserInfo.Username,
-			"FullName":      claims.UserInfo.FullName,
-		})
-	}))
-
-	r.POST("/poll/:id", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-
-		poll, err := database.GetPoll(c, c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		if canVote(claims.UserInfo, *poll, poll.AllowedUsers) > 0 || !poll.Open {
-			c.Redirect(http.StatusFound, "/results/"+poll.Id)
-			return
-		}
-
-		pId, err := primitive.ObjectIDFromHex(poll.Id)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		if poll.VoteType == database.POLL_TYPE_SIMPLE {
-			vote := database.SimpleVote{
-				Id:     "",
-				PollId: pId,
-				Option: c.PostForm("option"),
-			}
-			voter := database.Voter{
-				PollId: pId,
-				UserId: claims.UserInfo.Username,
-			}
-
-			if hasOption(poll, c.PostForm("option")) {
-				vote.Option = c.PostForm("option")
-			} else if poll.AllowWriteIns && c.PostForm("option") == "writein" {
-				vote.Option = c.PostForm("writeinOption")
-			} else {
-				c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Option"})
-				return
-			}
-			database.CastSimpleVote(c, &vote, &voter)
-		} else if poll.VoteType == database.POLL_TYPE_RANKED {
-			vote := database.RankedVote{
-				Id:      "",
-				PollId:  pId,
-				Options: make(map[string]int),
-			}
-			voter := database.Voter{
-				PollId: pId,
-				UserId: claims.UserInfo.Username,
-			}
-
-			for _, option := range poll.Options {
-				optionRankStr := c.PostForm(option)
-				optionRank, err := strconv.Atoi(optionRankStr)
-
-				if len(optionRankStr) < 1 {
-					continue
-				}
-				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "non-number ranking"})
-					return
-				}
-
-				vote.Options[option] = optionRank
-			}
-
-			// process write-in
-			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
-				for candidate := range vote.Options {
-					if strings.EqualFold(candidate, strings.TrimSpace(c.PostForm("writeinOption"))) {
-						c.JSON(http.StatusBadRequest, gin.H{"error": "Write-in is already an option"})
-						return
-					}
-				}
-				rank, err := strconv.Atoi(c.PostForm("writein"))
-				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Write-in rank is not numerical"})
-					return
-				}
-				if rank < 1 {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Write-in rank is not positive"})
-					return
-				}
-				vote.Options[c.PostForm("writeinOption")] = rank
-			}
-
-			maxNum := len(vote.Options)
-			voted := make([]bool, maxNum)
-
-			for _, rank := range vote.Options {
-				if rank > 0 && rank <= maxNum {
-					if voted[rank-1] {
-						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level"})
-						return
-					}
-					voted[rank-1] = true
-				} else {
-					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", maxNum)})
-					return
-				}
-			}
-
-			rankedCandidates := len(vote.Options)
-			for _, voteOpt := range vote.Options {
-				if voteOpt > rankedCandidates {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
-					return
-				}
-			}
-			database.CastRankedVote(c, &vote, &voter)
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unknown Poll Type"})
-			return
-		}
-
-		if poll, err := database.GetPoll(c, c.Param("id")); err == nil {
-			if results, err := poll.GetResult(c); err == nil {
-				if bytes, err := json.Marshal(results); err == nil {
-					broker.Notifier <- sse.NotificationEvent{
-						EventName: poll.Id,
-						Payload:   string(bytes),
-					}
-				}
-
-			}
-		}
-
-		c.Redirect(http.StatusFound, "/results/"+poll.Id)
-	}))
-
-	r.GET("/results/:id", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-		// This is intentionally left unprotected
-		// A user may be unable to vote but still interested in the results of a poll
-
-		poll, err := database.GetPoll(c, c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		results, err := poll.GetResult(c)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
-
-		votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
-		c.HTML(http.StatusOK, "result.tmpl", gin.H{
-			"Id":                   poll.Id,
-			"Title":                poll.Title,
-			"Description":          poll.Description,
-			"VoteType":             poll.VoteType,
-			"Results":              results,
-			"IsOpen":               poll.Open,
-			"IsHidden":             poll.Hidden,
-			"CanModify":            canModify,
-			"CanVote":              canVote(claims.UserInfo, *poll, poll.AllowedUsers),
-			"Username":             claims.UserInfo.Username,
-			"FullName":             claims.UserInfo.FullName,
-			"Gatekeep":             poll.Gatekeep,
-			"Quorum":               strconv.FormatFloat(poll.QuorumType*100.0, 'f', 0, 64),
-			"EligibleVoters":       poll.AllowedUsers,
-			"VotesNeededForQuorum": votesNeededForQuorum,
-		})
-	}))
-
-	r.POST("/poll/:id/hide", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-
-		poll, err := database.GetPoll(c, c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		if poll.CreatedBy != claims.UserInfo.Username {
-			c.JSON(http.StatusForbidden, gin.H{"error": "Only the creator can hide a poll result"})
-			return
-		}
-
-		err = poll.Hide(c)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		pId, _ := primitive.ObjectIDFromHex(poll.Id)
-		action := database.Action{
-			Id:     "",
-			PollId: pId,
-			Date:   primitive.NewDateTimeFromTime(time.Now()),
-			User:   claims.UserInfo.Username,
-			Action: "Hide Results",
-		}
-		err = database.WriteAction(c, &action)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.Redirect(http.StatusFound, "/results/"+poll.Id)
-	}))
-
-	r.POST("/poll/:id/close", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
-		// This is intentionally left unprotected
-		// A user should be able to end their own polls, regardless of if they can vote
-
-		poll, err := database.GetPoll(c, c.Param("id"))
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		if poll.Gatekeep {
-			c.JSON(http.StatusForbidden, gin.H{"error": "This poll cannot be closed manually"})
-			return
-		}
-
-		if poll.CreatedBy != claims.UserInfo.Username {
-			if !(slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard")) {
-				c.JSON(http.StatusForbidden, gin.H{"error": "You cannot end this poll."})
-				return
-			}
-		}
-
-		err = poll.Close(c)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		pId, _ := primitive.ObjectIDFromHex(poll.Id)
-		action := database.Action{
-			Id:     "",
-			PollId: pId,
-			Date:   primitive.NewDateTimeFromTime(time.Now()),
-			User:   claims.UserInfo.Username,
-			Action: "Close/End Poll",
-		}
-		err = database.WriteAction(c, &action)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-
-		c.Redirect(http.StatusFound, "/results/"+poll.Id)
-	}))
-
+	r.GET("/", csh.AuthWrapper(getHomepage))
+	r.GET("/closed", csh.AuthWrapper(getClosedPollsPage))
+	r.GET("/create", csh.AuthWrapper(getCreatePage))
+	r.POST("/create", csh.AuthWrapper(createPoll))
+	r.GET("/poll/:id", csh.AuthWrapper(getPollById))
+	r.POST("/poll/:id", csh.AuthWrapper(voteInPoll))
+	r.GET("/results/:id", csh.AuthWrapper(displayResults))
+	r.POST("/poll/:id/hide", csh.AuthWrapper(hidePoll))
+	r.POST("/poll/:id/close", csh.AuthWrapper(closePoll))
 	r.GET("/stream/:topic", csh.AuthWrapper(broker.ServeHTTP))
 
 	go broker.Listen()
@@ -555,40 +105,514 @@ func main() {
 	r.Run()
 }
 
-// isEvals determines if the current user is evals, allowing for a dev mode override
+// getHomepage Constructs and displays the home page to the user
+func getHomepage(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+	// This is intentionally left unprotected
+	// A user may be unable to vote but should still be able to see a list of polls
+
+	polls, err := database.GetOpenPolls(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	sort.Slice(polls, func(i, j int) bool {
+		return polls[i].Id > polls[j].Id
+	})
+
+	c.HTML(http.StatusOK, string(Index), gin.H{
+		"Polls":    polls,
+		"Username": claims.UserInfo.Username,
+		"FullName": claims.UserInfo.FullName,
+	})
+}
+
+// getClosedPollsPage Constructs and displays the closed polls page to the user
+func getClosedPollsPage(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+
+	closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	closedPolls = append(closedPolls, ownedPolls...)
+
+	sort.Slice(closedPolls, func(i, j int) bool {
+		return closedPolls[i].Id > closedPolls[j].Id
+	})
+	closedPolls = uniquePolls(closedPolls)
+
+	c.HTML(http.StatusOK, string(Closed), gin.H{
+		"ClosedPolls": closedPolls,
+		"Username":    claims.UserInfo.Username,
+		"FullName":    claims.UserInfo.FullName,
+	})
+}
+
+func getCreatePage(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+	if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
+		c.HTML(http.StatusForbidden, string(Unauthorized), gin.H{
+			"Username": claims.UserInfo.Username,
+			"FullName": claims.UserInfo.FullName,
+		})
+		return
+	}
+
+	c.HTML(http.StatusOK, string(Create), gin.H{
+		"Username": claims.UserInfo.Username,
+		"FullName": claims.UserInfo.FullName,
+		"IsEvals":  isEvals(claims.UserInfo),
+	})
+}
+
+func createPoll(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+	if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(claims.UserInfo.Groups, "active") {
+		c.HTML(http.StatusForbidden, string(Unauthorized), gin.H{
+			"Username": claims.UserInfo.Username,
+			"FullName": claims.UserInfo.FullName,
+		})
+		return
+	}
+
+	quorumType := c.PostForm("quorumType")
+	var quorum float64
+	switch quorumType {
+	case "12":
+		quorum = 1.0 / 2.0
+	case "23":
+		quorum = 2.0 / 3.0
+	default:
+		quorum = 1.0 / 2.0
+	}
+
+	poll := &database.Poll{
+		Id:            "",
+		CreatedBy:     claims.UserInfo.Username,
+		Title:         c.PostForm("title"),
+		Description:   c.PostForm("description"),
+		VoteType:      database.POLL_TYPE_SIMPLE,
+		OpenedTime:    time.Now(),
+		Open:          true,
+		QuorumType:    float64(quorum),
+		Gatekeep:      c.PostForm("gatekeep") == "true",
+		AllowWriteIns: c.PostForm("allowWriteIn") == "true",
+		Hidden:        c.PostForm("hidden") == "true",
+	}
+	switch c.PostForm("pollType") {
+	case "rankedChoice":
+		poll.VoteType = database.POLL_TYPE_RANKED
+	case "eboard":
+		eboard := oidcClient.GetEBoard()
+		var usernames []string
+		for _, member := range eboard {
+			usernames = append(usernames, member.Username)
+		}
+		poll.AllowedUsers = usernames
+		poll.AllowWriteIns = false
+		poll.Hidden = true
+		poll.Gatekeep = false
+	}
+
+	switch c.PostForm("options") {
+	case "pass-fail-conditional":
+		poll.Options = []string{"Pass", "Fail/Conditional", "Abstain"}
+	case "fail-conditional":
+		poll.Options = []string{"Fail", "Conditional", "Abstain"}
+	case "custom":
+		poll.Options = []string{}
+		for opt := range strings.SplitSeq(c.PostForm("customOptions"), ",") {
+			poll.Options = append(poll.Options, strings.TrimSpace(opt))
+			if !slices.Contains(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
+				poll.Options = append(poll.Options, "Abstain")
+			}
+		}
+	case "pass-fail":
+	default:
+		poll.Options = []string{"Pass", "Fail", "Abstain"}
+	}
+	if poll.Gatekeep {
+		if !isEvals(claims.UserInfo) {
+			c.HTML(http.StatusForbidden, string(Unauthorized), gin.H{
+				"Username": claims.UserInfo.Username,
+				"FullName": claims.UserInfo.FullName,
+			})
+			return
+		}
+		poll.AllowedUsers = GetEligibleVoters()
+		for user := range strings.SplitSeq(c.PostForm("waivedUsers"), ",") {
+			poll.AllowedUsers = append(poll.AllowedUsers, strings.TrimSpace(user))
+		}
+	}
+
+	pollId, err := database.CreatePoll(c, poll)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/poll/"+pollId)
+}
+
+func getPollById(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+	// This is intentionally left unprotected
+	// We will check if a user can vote and redirect them to results if not later
+
+	poll, err := database.GetPoll(c, c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// If the user can't vote, just show them results
+	if canVote(claims.UserInfo, *poll, poll.AllowedUsers) > 0 || !poll.Open {
+		c.Redirect(http.StatusFound, "/results/"+poll.Id)
+		return
+	}
+
+	writeInAdj := 0
+	if poll.AllowWriteIns {
+		writeInAdj = 1
+	}
+
+	canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
+
+	c.HTML(200, string(Poll), gin.H{
+		"Id":            poll.Id,
+		"Title":         poll.Title,
+		"Description":   poll.Description,
+		"Options":       poll.Options,
+		"PollType":      poll.VoteType,
+		"RankedMax":     fmt.Sprint(len(poll.Options) + writeInAdj),
+		"AllowWriteIns": poll.AllowWriteIns,
+		"CanModify":     canModify,
+		"Username":      claims.UserInfo.Username,
+		"FullName":      claims.UserInfo.FullName,
+	})
+}
+
+func voteInPoll(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+
+	poll, err := database.GetPoll(c, c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if canVote(claims.UserInfo, *poll, poll.AllowedUsers) > 0 || !poll.Open {
+		c.Redirect(http.StatusFound, "/results/"+poll.Id)
+		return
+	}
+
+	pId, err := primitive.ObjectIDFromHex(poll.Id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if poll.VoteType == database.POLL_TYPE_SIMPLE {
+		vote := database.SimpleVote{
+			Id:     "",
+			PollId: pId,
+			Option: c.PostForm("option"),
+		}
+		voter := database.Voter{
+			PollId: pId,
+			UserId: claims.UserInfo.Username,
+		}
+
+		if hasOption(poll, c.PostForm("option")) {
+			vote.Option = c.PostForm("option")
+		} else if poll.AllowWriteIns && c.PostForm("option") == "writein" {
+			vote.Option = c.PostForm("writeinOption")
+		} else {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid Option"})
+			return
+		}
+		database.CastSimpleVote(c, &vote, &voter)
+	} else if poll.VoteType == database.POLL_TYPE_RANKED {
+		vote := database.RankedVote{
+			Id:      "",
+			PollId:  pId,
+			Options: make(map[string]int),
+		}
+		voter := database.Voter{
+			PollId: pId,
+			UserId: claims.UserInfo.Username,
+		}
+
+		for _, option := range poll.Options {
+			optionRankStr := c.PostForm(option)
+			optionRank, err := strconv.Atoi(optionRankStr)
+
+			if len(optionRankStr) < 1 {
+				continue
+			}
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "non-number ranking"})
+				return
+			}
+
+			vote.Options[option] = optionRank
+		}
+
+		// process write-in
+		if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
+			for candidate := range vote.Options {
+				if strings.EqualFold(candidate, strings.TrimSpace(c.PostForm("writeinOption"))) {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "Write-in is already an option"})
+					return
+				}
+			}
+			rank, err := strconv.Atoi(c.PostForm("writein"))
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Write-in rank is not numerical"})
+				return
+			}
+			if rank < 1 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Write-in rank is not positive"})
+				return
+			}
+			vote.Options[c.PostForm("writeinOption")] = rank
+		}
+
+		maxNum := len(vote.Options)
+		voted := make([]bool, maxNum)
+
+		for _, rank := range vote.Options {
+			if rank > 0 && rank <= maxNum {
+				if voted[rank-1] {
+					c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level"})
+					return
+				}
+				voted[rank-1] = true
+			} else {
+				c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", maxNum)})
+				return
+			}
+		}
+
+		rankedCandidates := len(vote.Options)
+		for _, voteOpt := range vote.Options {
+			if voteOpt > rankedCandidates {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
+				return
+			}
+		}
+		database.CastRankedVote(c, &vote, &voter)
+	} else {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unknown Poll Type"})
+		return
+	}
+
+	if poll, err := database.GetPoll(c, c.Param("id")); err == nil {
+		if results, err := poll.GetResult(c); err == nil {
+			if bytes, err := json.Marshal(results); err == nil {
+				broker.Notifier <- sse.NotificationEvent{
+					EventName: poll.Id,
+					Payload:   string(bytes),
+				}
+			}
+
+		}
+	}
+
+	c.Redirect(http.StatusFound, "/results/"+poll.Id)
+}
+
+// displayResults calculates and displays the results of the poll on the results page
+func displayResults(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+	// This is intentionally left unprotected
+	// A user may be unable to vote but still interested in the results of a poll
+
+	poll, err := database.GetPoll(c, c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	results, err := poll.GetResult(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
+
+	votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
+	c.HTML(http.StatusOK, string(Result), gin.H{
+		"Id":                   poll.Id,
+		"Title":                poll.Title,
+		"Description":          poll.Description,
+		"VoteType":             poll.VoteType,
+		"Results":              results,
+		"IsOpen":               poll.Open,
+		"IsHidden":             poll.Hidden,
+		"CanModify":            canModify,
+		"CanVote":              canVote(claims.UserInfo, *poll, poll.AllowedUsers),
+		"Username":             claims.UserInfo.Username,
+		"FullName":             claims.UserInfo.FullName,
+		"Gatekeep":             poll.Gatekeep,
+		"Quorum":               strconv.FormatFloat(poll.QuorumType*100.0, 'f', 0, 64),
+		"EligibleVoters":       poll.AllowedUsers,
+		"VotesNeededForQuorum": votesNeededForQuorum,
+	})
+}
+
+// hidePoll makes the results of a specific poll hidden until the poll closes.
+//
+// Results are automatically unhidden when the poll closes
+func hidePoll(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+
+	poll, err := database.GetPoll(c, c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if poll.CreatedBy != claims.UserInfo.Username {
+		c.JSON(http.StatusForbidden, gin.H{"error": "Only the creator can hide a poll result"})
+		return
+	}
+
+	err = poll.Hide(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	pId, _ := primitive.ObjectIDFromHex(poll.Id)
+	action := database.Action{
+		Id:     "",
+		PollId: pId,
+		Date:   primitive.NewDateTimeFromTime(time.Now()),
+		User:   claims.UserInfo.Username,
+		Action: "Hide Results",
+	}
+	err = database.WriteAction(c, &action)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/results/"+poll.Id)
+}
+
+// closePoll Ends the voting period on a particular poll
+func closePoll(c *gin.Context) {
+	cl, _ := c.Get("cshauth")
+	claims := cl.(cshAuth.CSHClaims)
+	// This is intentionally left unprotected
+	// A user should be able to end their own polls, regardless of if they can vote
+
+	poll, err := database.GetPoll(c, c.Param("id"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	if poll.Gatekeep {
+		c.JSON(http.StatusForbidden, gin.H{"error": "This poll cannot be closed manually"})
+		return
+	}
+
+	if poll.CreatedBy != claims.UserInfo.Username {
+		if !(slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard")) {
+			c.JSON(http.StatusForbidden, gin.H{"error": "You cannot end this poll."})
+			return
+		}
+	}
+
+	err = poll.Close(c)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	pId, _ := primitive.ObjectIDFromHex(poll.Id)
+	action := database.Action{
+		Id:     "",
+		PollId: pId,
+		Date:   primitive.NewDateTimeFromTime(time.Now()),
+		User:   claims.UserInfo.Username,
+		Action: "Close/End Poll",
+	}
+	err = database.WriteAction(c, &action)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.Redirect(http.StatusFound, "/results/"+poll.Id)
+}
+
+func inc(x int) string {
+	return strconv.Itoa(x + 1)
+}
+
+// isEvals Determines if the current user is evals, allowing for a dev mode override
 func isEvals(user cshAuth.CSHUserInfo) bool {
 	return DEV_FORCE_IS_EVALS || slices.Contains(user.Groups, "eboard-evaluations")
 }
 
+// isChair Determines if the current user is chair, allowing for a dev mode override
 func isChair(user cshAuth.CSHUserInfo) bool {
 	return DEV_FORCE_IS_CHAIR || slices.Contains(user.Groups, "eboard-chairman")
 }
 
-// canVote determines whether a user can cast a vote.
+// canVote Determines whether a user can cast a vote.
 //
-// returns an integer value: 0 is success, 1 is database error, 3 is not active, 4 is gatekept, 9 is already voted
-// TODO: use the return value to influence messages shown on results page
+//	0 -> Allowed to vote
+//	1 -> Database error
+//	3 -> Not active
+//	4 -> Gatekept
+//	9 -> Already voted
 func canVote(user cshAuth.CSHUserInfo, poll database.Poll, allowedUsers []string) int {
 	// always false if user is not active
 	if !DEV_DISABLE_ACTIVE_FILTERS && !slices.Contains(user.Groups, "active") {
 		return 3
 	}
+
 	voted, err := database.HasVoted(context.Background(), poll.Id, user.Username)
+
 	if err != nil {
 		logging.Logger.WithFields(logrus.Fields{"method": "canVote"}).Error(err)
 		return 1
 	}
+
 	if voted {
 		return 9
 	}
-	if poll.Gatekeep { //if gatekeep is enabled, but they aren't allowed to vote in the poll, false
+
+	// If gatekeep is enabled, but they aren't allowed to vote in the poll, false
+	if poll.Gatekeep {
 		if !slices.Contains(allowedUsers, user.Username) {
 			return 4
 		}
-	} //otherwise true
+	}
+
+	// Otherwise true
 	return 0
 }
 
+// uniquePolls Retrieves a list of all unique polls that exist in the database
 func uniquePolls(polls []*database.Poll) []*database.Poll {
 	var unique []*database.Poll
 	for _, poll := range polls {
@@ -599,6 +623,7 @@ func uniquePolls(polls []*database.Poll) []*database.Poll {
 	return unique
 }
 
+// containsPoll Determines whether a poll with a specific id exists in the database
 func containsPoll(polls []*database.Poll, poll *database.Poll) bool {
 	for _, p := range polls {
 		if p.Id == poll.Id {
@@ -608,6 +633,7 @@ func containsPoll(polls []*database.Poll, poll *database.Poll) bool {
 	return false
 }
 
+// hasOption Determines whether a particular poll contains a specified option
 func hasOption(poll *database.Poll, option string) bool {
 	for _, opt := range poll.Options {
 		if opt == option {
@@ -615,4 +641,22 @@ func hasOption(poll *database.Poll, option string) bool {
 		}
 	}
 	return false
+}
+
+// GetVoterCount Gets the number of people eligible to vote in a poll
+func GetVoterCount(poll database.Poll) int {
+	return len(poll.AllowedUsers)
+}
+
+// CalculateQuorum Calculates the number of votes required for quorum in a poll
+func CalculateQuorum(poll database.Poll) int {
+	voterCount := GetVoterCount(poll)
+	return int(math.Ceil(float64(voterCount) * poll.QuorumType))
+}
+
+func MakeLinks(s string) template.HTML {
+	rx := xurls.Strict()
+	s = template.HTMLEscapeString(s)
+	safe := rx.ReplaceAllString(s, `<a href="$0" target="_blank">$0</a>`)
+	return template.HTML(safe)
 }
