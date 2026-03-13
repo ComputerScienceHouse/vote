@@ -400,15 +400,7 @@ func main() {
 					}
 					voted[rank-1] = true
 				} else {
-					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", optionCount)})
-					return
-				}
-			}
-
-			// Too large of a rank
-			for _, voteOpt := range vote.Options {
-				if voteOpt > optionCount {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
+					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Candidates chosen must be from 1 to %d", optionCount)})
 					return
 				}
 			}
