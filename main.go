@@ -346,6 +346,7 @@ func main() {
 				UserId: claims.UserInfo.Username,
 			}
 
+			// Populate vote
 			for _, option := range poll.Options {
 				optionRankStr := c.PostForm(option)
 				optionRank, err := strconv.Atoi(optionRankStr)
@@ -360,7 +361,6 @@ func main() {
 
 				vote.Options[option] = optionRank
 			}
-
 			// process write-in
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				for candidate := range vote.Options {
@@ -380,30 +380,32 @@ func main() {
 				}
 				vote.Options[c.PostForm("writeinOption")] = rank
 			}
+			// Perform checks, vote does not change beyond this
 
-			maxNum := len(vote.Options)
-			voted := make([]bool, maxNum)
+			optionCount := len(vote.Options)
+			voted := make([]bool, optionCount)
 
+			// Make sure vote is not empty
+			if optionCount == 0 {
+				c.JSON(http.StatusBadRequest, gin.H{"error": "You did not rank any options"})
+				return
+			}
+
+			// Duplicate ranks and range check
 			for _, rank := range vote.Options {
-				if rank > 0 && rank <= maxNum {
+				if rank > 0 && rank <= optionCount {
 					if voted[rank-1] {
 						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level"})
 						return
 					}
 					voted[rank-1] = true
 				} else {
-					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("votes must be from 1 - %d", maxNum)})
+					c.JSON(http.StatusBadRequest, gin.H{"error": fmt.Sprintf("Candidates chosen must be from 1 to %d", optionCount)})
 					return
 				}
 			}
 
-			rankedCandidates := len(vote.Options)
-			for _, voteOpt := range vote.Options {
-				if voteOpt > rankedCandidates {
-					c.JSON(http.StatusBadRequest, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
-					return
-				}
-			}
+			// Submit Vote
 			database.CastRankedVote(c, &vote, &voter)
 		} else {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Unknown Poll Type"})
