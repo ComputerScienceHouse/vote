@@ -112,6 +112,23 @@ func main() {
 			return polls[i].Id > polls[j].Id
 		})
 
+		closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+		closedPolls = append(closedPolls, ownedPolls...)
+
+		sort.Slice(closedPolls, func(i, j int) bool {
+			return closedPolls[i].Id > closedPolls[j].Id
+		})
+		closedPolls = uniquePolls(closedPolls)
+
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{
 			"Polls":    polls,
 			"Username": claims.UserInfo.Username,
@@ -361,6 +378,7 @@ func main() {
 
 				vote.Options[option] = optionRank
 			}
+
 			// process write-in
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				for candidate := range vote.Options {
@@ -380,8 +398,8 @@ func main() {
 				}
 				vote.Options[c.PostForm("writeinOption")] = rank
 			}
-			// Perform checks, vote does not change beyond this
 
+			// Perform checks, vote does not change beyond this
 			optionCount := len(vote.Options)
 			voted := make([]bool, optionCount)
 
@@ -394,6 +412,10 @@ func main() {
 			// Duplicate ranks and range check
 			for _, rank := range vote.Options {
 				if rank > 0 && rank <= optionCount {
+					if rank > optionCount {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
+						return
+					}
 					if voted[rank-1] {
 						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level"})
 						return
@@ -522,7 +544,8 @@ func main() {
 		}
 
 		if poll.CreatedBy != claims.UserInfo.Username {
-			if !(slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard")) {
+			if slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") {
+			} else {
 				c.JSON(http.StatusForbidden, gin.H{"error": "You cannot end this poll."})
 				return
 			}
