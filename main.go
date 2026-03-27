@@ -229,7 +229,7 @@ func main() {
 			poll.Options = []string{}
 			for opt := range strings.SplitSeq(c.PostForm("customOptions"), ",") {
 				poll.Options = append(poll.Options, strings.TrimSpace(opt))
-				if !containsString(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
+				if !slices.Contains(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
 					poll.Options = append(poll.Options, "Abstain")
 				}
 			}
@@ -283,7 +283,7 @@ func main() {
 			writeInAdj = 1
 		}
 
-		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
+		canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
 		c.HTML(200, "poll.tmpl", gin.H{
 			"Id":            poll.Id,
@@ -455,7 +455,7 @@ func main() {
 			return
 		}
 
-		canModify := containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
+		canModify := slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") || poll.CreatedBy == claims.UserInfo.Username
 
 		votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
 		c.HTML(http.StatusOK, "result.tmpl", gin.H{
@@ -532,7 +532,7 @@ func main() {
 		}
 
 		if poll.CreatedBy != claims.UserInfo.Username {
-			if containsString(claims.UserInfo.Groups, "active_rtp") || containsString(claims.UserInfo.Groups, "eboard") {
+			if slices.Contains(claims.UserInfo.Groups, "active_rtp") || slices.Contains(claims.UserInfo.Groups, "eboard") {
 			} else {
 				c.JSON(http.StatusForbidden, gin.H{"error": "You cannot end this poll."})
 				return
@@ -570,7 +570,7 @@ func main() {
 
 // isEvals determines if the current user is evals, allowing for a dev mode override
 func isEvals(user cshAuth.CSHUserInfo) bool {
-	return DEV_FORCE_IS_EVALS || containsString(user.Groups, "eboard-evaluations")
+	return DEV_FORCE_IS_EVALS || slices.Contains(user.Groups, "eboard-evaluations")
 }
 
 // canVote determines whether a user can cast a vote.
@@ -620,15 +620,6 @@ func containsPoll(polls []*database.Poll, poll *database.Poll) bool {
 func hasOption(poll *database.Poll, option string) bool {
 	for _, opt := range poll.Options {
 		if opt == option {
-			return true
-		}
-	}
-	return false
-}
-
-func containsString(arr []string, val string) bool {
-	for _, a := range arr {
-		if a == val {
 			return true
 		}
 	}
