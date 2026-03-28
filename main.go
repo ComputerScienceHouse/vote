@@ -95,12 +95,15 @@ func main() {
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
 
+	r.GET("/eboard", csh.AuthWrapper(HandleGetEboardVote))
+	r.POST("/eboard", csh.AuthWrapper(HandlePostEboardVote))
+	r.POST("/eboard/manage", csh.AuthWrapper(HandleManageEboardVote))
+
 	// TODO: change ALL the response codes to use http.(actual description)
 	r.GET("/", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
 		// This is intentionally left unprotected
 		// A user may be unable to vote but should still be able to see a list of polls
+		user := getUserData(c)
 
 		polls, err := database.GetOpenPolls(c)
 		if err != nil {
@@ -111,27 +114,11 @@ func main() {
 			return polls[i].Id > polls[j].Id
 		})
 
-		closedPolls, err := database.GetClosedVotedPolls(c, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		ownedPolls, err := database.GetClosedOwnedPolls(c, claims.UserInfo.Username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		closedPolls = append(closedPolls, ownedPolls...)
-
-		sort.Slice(closedPolls, func(i, j int) bool {
-			return closedPolls[i].Id > closedPolls[j].Id
-		})
-		closedPolls = uniquePolls(closedPolls)
-
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{
 			"Polls":    polls,
-			"Username": claims.UserInfo.Username,
-			"FullName": claims.UserInfo.FullName,
+			"Username": user.Username,
+			"FullName": user.FullName,
+			"EBoard":   slices.Contains(user.Groups, "eboard"),
 		})
 	}))
 
@@ -596,6 +583,12 @@ func canVote(user cshAuth.CSHUserInfo, poll database.Poll, allowedUsers []string
 		}
 	} //otherwise true
 	return 0
+}
+
+func getUserData(c *gin.Context) cshAuth.CSHUserInfo {
+	cl, _ := c.Get("cshauth")
+	user := cl.(cshAuth.CSHClaims).UserInfo
+	return user
 }
 
 func uniquePolls(polls []*database.Poll) []*database.Poll {

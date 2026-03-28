@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -29,6 +30,8 @@ type OIDCUser struct {
 	SlackUID string `json:"slackuid"`
 }
 
+var groupCache map[string]string
+
 func (client *OIDCClient) setupOidcClient(oidcClientId, oidcClientSecret string) {
 	client.oidcClientId = oidcClientId
 	client.oidcClientSecret = oidcClientSecret
@@ -37,6 +40,7 @@ func (client *OIDCClient) setupOidcClient(oidcClientId, oidcClientSecret string)
 		logging.Logger.WithFields(logrus.Fields{"method": "setupOidcClient"}).Error(err)
 		return
 	}
+	groupCache = make(map[string]string)
 	client.providerBase = parse.Scheme + "://" + parse.Host
 	exp := client.getAccessToken()
 	ticker := time.NewTicker(time.Duration(exp) * time.Second)
@@ -92,6 +96,45 @@ func (client *OIDCClient) GetActiveUsers() []OIDCUser {
 
 func (client *OIDCClient) GetEBoard() []OIDCUser {
 	return client.GetOIDCGroup("47dd1a94-853c-426d-b181-6d0714074892")
+}
+
+func (client *OIDCClient) FindOIDCGroupID(name string) string {
+	if groupCache[name] != "" {
+		return groupCache[name]
+	}
+	htclient := &http.Client{}
+	//active
+	req, err := http.NewRequest("GET", client.providerBase+"/auth/admin/realms/csh/groups?exact=true&search="+name, nil)
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "FindOIDCGroupID"}).Error(err)
+		return ""
+	}
+	req.Header.Add("Authorization", "Bearer "+client.accessToken)
+	resp, err := htclient.Do(req)
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "FindOIDCGroupID"}).Error(err)
+		return ""
+	}
+	defer resp.Body.Close()
+	ret := make([]map[string]any, 0)
+	err = json.NewDecoder(resp.Body).Decode(&ret)
+	if err != nil {
+		logging.Logger.WithFields(logrus.Fields{"method": "FindOIDCGroupID"}).Error(err)
+		return ""
+	}
+	//Example:
+	//[{"id":"47dd1a94-853c-426d-b181-6d0714074892","name":"eboard","path":"/eboard","subGroups":[{"id":"66b9578a-2b58-46a6-8040-59388e57e830","name":"eboard-opcomm","path":"/eboard/eboard-opcomm","subGroups":[]}]}]
+	//it returns as an array for SOME reason, so we cut to the group we want
+	group := ret[0]
+	// and now we have SUBgroups, so we do this fucked parse
+	subGroups := group["subGroups"].([]any)
+	fmt.Println(subGroups)
+	subGroup := subGroups[0].(map[string]interface{})
+	fmt.Println(subGroup)
+	gid := subGroup["id"].(string)
+	groupCache[name] = gid
+	return gid
+
 }
 
 func (client *OIDCClient) GetOIDCGroup(groupID string) []OIDCUser {
