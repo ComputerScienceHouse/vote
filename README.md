@@ -31,6 +31,7 @@ VOTE_SLACK_BOT_TOKEN=
 
 ### Dev Overrides
 `DEV_DISABLE_ACTIVE_FILTERS="true"` will disable the requirements that you be active to vote
+`DEV_FORCE_IS_EBOARD="true"` will force vote to treat all users as E-Board members
 `DEV_FORCE_IS_EVALS="true"` will force vote to treat all users as the Evals director
 
 ## Linting
