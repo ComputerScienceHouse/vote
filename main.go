@@ -30,20 +30,19 @@ var CONDITIONAL_GATEKEEP_URL = os.Getenv("VOTE_CONDITIONAL_URL")
 var VOTE_HOST = os.Getenv("VOTE_HOST")
 
 // Dev mode flags
-var DEV_DISABLE_ACTIVE_FILTERS = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "true"
-var DEV_FORCE_IS_EVALS = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
-var DEV_FORCE_IS_CHAIR = os.Getenv("DEV_FORCE_IS_CHAIR") == "true"
+var DEV_DISABLE_ACTIVE_FILTERS bool = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "true"
+var DEV_FORCE_IS_EVALS bool = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
 
 func inc(x int) string {
 	return strconv.Itoa(x + 1)
 }
 
-// GetVoterCount Gets the number of people eligible to vote in a poll
+// Gets the number of people eligible to vote in a poll
 func GetVoterCount(poll database.Poll) int {
 	return len(poll.AllowedUsers)
 }
 
-// CalculateQuorum Calculates the number of votes required for quorum in a poll
+// Calculates the number of votes required for quorum in a poll
 func CalculateQuorum(poll database.Poll) int {
 	voterCount := GetVoterCount(poll)
 	return int(math.Ceil(float64(voterCount) * poll.QuorumType))
@@ -96,12 +95,15 @@ func main() {
 	r.GET("/auth/callback", csh.AuthCallback)
 	r.GET("/auth/logout", csh.AuthLogout)
 
+	r.GET("/eboard", csh.AuthWrapper(HandleGetEboardVote))
+	r.POST("/eboard", csh.AuthWrapper(HandlePostEboardVote))
+	r.POST("/eboard/manage", csh.AuthWrapper(HandleManageEboardVote))
+
 	// TODO: change ALL the response codes to use http.(actual description)
 	r.GET("/", csh.AuthWrapper(func(c *gin.Context) {
-		cl, _ := c.Get("cshauth")
-		claims := cl.(cshAuth.CSHClaims)
 		// This is intentionally left unprotected
 		// A user may be unable to vote but should still be able to see a list of polls
+		user := getUserData(c)
 
 		polls, err := database.GetOpenPolls(c)
 		if err != nil {
@@ -114,8 +116,9 @@ func main() {
 
 		c.HTML(http.StatusOK, "index.tmpl", gin.H{
 			"Polls":    polls,
-			"Username": claims.UserInfo.Username,
-			"FullName": claims.UserInfo.FullName,
+			"Username": user.Username,
+			"FullName": user.FullName,
+			"EBoard":   slices.Contains(user.Groups, "eboard"),
 		})
 	}))
 
@@ -200,19 +203,8 @@ func main() {
 			AllowWriteIns: c.PostForm("allowWriteIn") == "true",
 			Hidden:        c.PostForm("hidden") == "true",
 		}
-		switch c.PostForm("pollType") {
-		case "rankedChoice":
+		if c.PostForm("rankedChoice") == "true" {
 			poll.VoteType = database.POLL_TYPE_RANKED
-		case "eboard":
-			eboard := oidcClient.GetEBoard()
-			var usernames []string
-			for _, member := range eboard {
-				usernames = append(usernames, member.Username)
-			}
-			poll.AllowedUsers = usernames
-			poll.AllowWriteIns = false
-			poll.Hidden = true
-			poll.Gatekeep = false
 		}
 
 		switch c.PostForm("options") {
@@ -361,6 +353,7 @@ func main() {
 
 				vote.Options[option] = optionRank
 			}
+
 			// process write-in
 			if c.PostForm("writeinOption") != "" && c.PostForm("writein") != "" {
 				for candidate := range vote.Options {
@@ -380,8 +373,8 @@ func main() {
 				}
 				vote.Options[c.PostForm("writeinOption")] = rank
 			}
-			// Perform checks, vote does not change beyond this
 
+			// Perform checks, vote does not change beyond this
 			optionCount := len(vote.Options)
 			voted := make([]bool, optionCount)
 
@@ -394,6 +387,10 @@ func main() {
 			// Duplicate ranks and range check
 			for _, rank := range vote.Options {
 				if rank > 0 && rank <= optionCount {
+					if rank > optionCount {
+						c.JSON(http.StatusBadRequest, gin.H{"error": "Rank choice is more than the amount of candidates ranked"})
+						return
+					}
 					if voted[rank-1] {
 						c.JSON(http.StatusBadRequest, gin.H{"error": "You ranked two or more candidates at the same level"})
 						return
@@ -562,10 +559,6 @@ func isEvals(user cshAuth.CSHUserInfo) bool {
 	return DEV_FORCE_IS_EVALS || slices.Contains(user.Groups, "eboard-evaluations")
 }
 
-func isChair(user cshAuth.CSHUserInfo) bool {
-	return DEV_FORCE_IS_CHAIR || slices.Contains(user.Groups, "eboard-chairman")
-}
-
 // canVote determines whether a user can cast a vote.
 //
 // returns an integer value: 0 is success, 1 is database error, 3 is not active, 4 is gatekept, 9 is already voted
@@ -589,6 +582,12 @@ func canVote(user cshAuth.CSHUserInfo, poll database.Poll, allowedUsers []string
 		}
 	} //otherwise true
 	return 0
+}
+
+func getUserData(c *gin.Context) cshAuth.CSHUserInfo {
+	cl, _ := c.Get("cshauth")
+	user := cl.(cshAuth.CSHClaims).UserInfo
+	return user
 }
 
 func uniquePolls(polls []*database.Poll) []*database.Poll {

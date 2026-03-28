@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>CSH Vote</title>
+  <link rel="stylesheet"
+        href="https://assets.csh.rit.edu/csh-material-bootstrap/4.6.2/dist/csh-material-bootstrap.min.css"
+        media="screen">
+
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body>
+{{ template "nav" . }}
+<div class="container main p-5">
+  <h2>E-Board Vote</h2>
+  <div class="row">
+    <div class="col-md-8">
+      {{ if .Voted }}
+        {{ range $option, $count := .Results }}
+          <div id="{{ $option }}" style="font-size: 1.25rem; line-height: 1.25">
+              {{ $option }}: {{ $count }}
+          </div>
+          <br/>
+        {{ end }}
+      {{ else }}
+        <form method="POST">
+          {{ range $i, $option := .Options }}
+            <div class="form-check">
+              <input class="form-check-input" type="radio" name="option"
+                     id="{{ $option }}"
+                     value="{{ $option }}" required/>
+              <label style="font-size: 1.25rem; line-height: 1.25; padding-left: 4px;"
+                     class="form-check-label"
+                     for="{{ $option }}">{{ $option }}</label>
+            </div>
+            <br/>
+          {{ end }}
+          <button type="submit" class="btn btn-primary">Submit</button>
+        </form>
+      {{ end }}
+    </div>
+    <div class="col-md-4">
+      <form action="/eboard/manage" method="POST" onsubmit="location.reload()">
+        <input class="d-none" name="clear_vote" value="true">
+        <button type="submit" class="btn btn-warning">Clear Votes</button>
+      </form>
+    </div>
+  </div>
+</div>
+</body>
+</html>
