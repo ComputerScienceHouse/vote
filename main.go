@@ -31,6 +31,7 @@ var VOTE_HOST = os.Getenv("VOTE_HOST")
 
 // Dev mode flags
 var DEV_DISABLE_ACTIVE_FILTERS bool = os.Getenv("DEV_DISABLE_ACTIVE_FILTERS") == "true"
+var DEV_FORCE_IS_EBOARD bool = os.Getenv("DEV_FORCE_IS_EBOARD") == "true"
 var DEV_FORCE_IS_EVALS bool = os.Getenv("DEV_FORCE_IS_EVALS") == "true"
 
 func inc(x int) string {
@@ -86,7 +87,9 @@ func main() {
 	if DEV_DISABLE_ACTIVE_FILTERS {
 		logging.Logger.WithFields(logrus.Fields{"method": "main init"}).Warning("Dev disable active filters is set!")
 	}
-
+	if DEV_FORCE_IS_EBOARD {
+		logging.Logger.WithFields(logrus.Fields{"method": "main init"}).Warning("Dev force eboard is set!")
+	}
 	if DEV_FORCE_IS_EVALS {
 		logging.Logger.WithFields(logrus.Fields{"method": "main init"}).Warning("Dev force evals is set!")
 	}
@@ -164,7 +167,7 @@ func main() {
 		c.HTML(http.StatusOK, "create.tmpl", gin.H{
 			"Username": claims.UserInfo.Username,
 			"FullName": claims.UserInfo.FullName,
-			"IsEvals":  isEvals(claims.UserInfo),
+			"IsEboard": isEboard(claims.UserInfo),
 		})
 	}))
 
@@ -225,7 +228,7 @@ func main() {
 			poll.Options = []string{"Pass", "Fail", "Abstain"}
 		}
 		if poll.Gatekeep {
-			if !isEvals(claims.UserInfo) {
+			if !isEboard(claims.UserInfo) {
 				c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
 					"Username": claims.UserInfo.Username,
 					"FullName": claims.UserInfo.FullName,
@@ -552,6 +555,11 @@ func main() {
 	go broker.Listen()
 
 	r.Run()
+}
+
+// isEboard determines if the current user is on eboard, allowing for a dev mode override
+func isEboard(user cshAuth.CSHUserInfo) bool {
+	return DEV_FORCE_IS_EBOARD || slices.Contains(user.Groups, "eboard")
 }
 
 // isEvals determines if the current user is evals, allowing for a dev mode override

@@ -31,6 +31,7 @@ VOTE_SLACK_BOT_TOKEN=
 
 ### Dev Overrides
 `DEV_DISABLE_ACTIVE_FILTERS="true"` will disable the requirements that you be active to vote
+`DEV_FORCE_IS_EBOARD="true"` will force vote to treat all users as E-Board members
 `DEV_FORCE_IS_EVALS="true"` will force vote to treat all users as the Evals director
 
 ## Linting
@@ -56,7 +57,7 @@ go vet *.go
 - [ ] Don't let the user fuck it up
 - [ ] Show E-Board polls with a higher priority
 - [x] Move Hide Vote to create instead of after you vote :skull:
-- [ ] Display the reason why a user is on the results page of a running poll
+- [X] Display the reason why a user is on the results page of a running poll
 - [ ] Display minimum time left that a poll is open
 - [ ] Move routes to their own functions 
-- [ ] Change HTTP resposne codes to be `http.something` instead of just a number
+- [X] Change HTTP resposne codes to be `http.something` instead of just a number
