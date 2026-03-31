@@ -6,11 +6,13 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"time"
 
 	cshAuth "github.com/computersciencehouse/csh-auth"
 	"github.com/computersciencehouse/vote/logging"
+	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
 
@@ -203,6 +205,7 @@ func (client *OIDCClient) GetUserInfo(user *OIDCUser) {
 	}
 }
 
+// GetUserGatekeep Queries conditional to determine whether a user has met the gatekeep requirements
 func (client *OIDCClient) GetUserGatekeep(user *OIDCUser) {
 	htclient := &http.Client{}
 	req, err := http.NewRequest("GET", CONDITIONAL_GATEKEEP_URL+"/"+user.Username, nil)
@@ -226,4 +229,31 @@ func (client *OIDCClient) GetUserGatekeep(user *OIDCUser) {
 	if err != nil {
 		logging.Logger.WithFields(logrus.Fields{"method": "GetUserGatekeep"}).Error(err)
 	}
+}
+
+// GetUserData Retreives information about a specific CSH user account
+func GetUserData(c *gin.Context) cshAuth.CSHUserInfo {
+	cl, _ := c.Get("cshauth")
+	user := cl.(cshAuth.CSHClaims).UserInfo
+	return user
+}
+
+// IsActive determines if the user is an active member, and allows for a dev mode override
+func IsActive(user cshAuth.CSHUserInfo) bool {
+	return DEV_DISABLE_ACTIVE_FILTERS || slices.Contains(user.Groups, "active")
+}
+
+// IsEboard determines if the current user is on eboard, allowing for a dev mode override
+func IsEboard(user cshAuth.CSHUserInfo) bool {
+	return DEV_FORCE_IS_EBOARD || slices.Contains(user.Groups, "eboard")
+}
+
+// IsEvals determines if the current user is evals, allowing for a dev mode override
+func IsEvals(user cshAuth.CSHUserInfo) bool {
+	return DEV_FORCE_IS_EVALS || slices.Contains(user.Groups, "eboard-evaluations")
+}
+
+// IsActiveRTP Determines whether the user is an active RTP, based on user groups from OIDC
+func IsActiveRTP(user cshAuth.CSHUserInfo) bool {
+	return slices.Contains(user.Groups, "active-rtp")
 }

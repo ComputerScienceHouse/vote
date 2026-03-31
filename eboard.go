@@ -15,8 +15,8 @@ var voters []string
 var OPTIONS = []string{"Pass", "Fail", "Abstain"}
 
 func HandleGetEboardVote(c *gin.Context) {
-	user := getUserData(c)
-	if !slices.Contains(user.Groups, "eboard") {
+	user := GetUserData(c)
+	if IsEboard(user) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "You need to be E-Board to access this page"})
 		return
 	}
@@ -33,8 +33,8 @@ func HandleGetEboardVote(c *gin.Context) {
 }
 
 func HandlePostEboardVote(c *gin.Context) {
-	user := getUserData(c)
-	if !slices.Contains(user.Groups, "eboard") {
+	user := GetUserData(c)
+	if IsEboard(user) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "You need to be E-Board to access this page"})
 		return
 	}
@@ -65,8 +65,8 @@ func HandlePostEboardVote(c *gin.Context) {
 }
 
 func HandleManageEboardVote(c *gin.Context) {
-	user := getUserData(c)
-	if !slices.Contains(user.Groups, "eboard") {
+	user := GetUserData(c)
+	if !IsEboard(user) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "You need to be E-Board to access this page"})
 		return
 	}
