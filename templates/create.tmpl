@@ -84,22 +84,17 @@
             >
             <span> Gatekeep Required (Require Quorum, Limit Voters, Force Automatic Close)</span>
         </div>
-        <div id="quorumTypeGroup" class="form-group" style="display:none">
-            <span>Quorum Type</span>
+        <div id="quorumPercentInput">
+            <label for="quorumType">Quorum Type</span>
             <input
-              type="radio"
+              type="number"
               name="quorumType"
               id="quorumType"
-              value="12"
+              min="0"
+              max="100"
+              step="1"
             >
-            <span> One-Half</span>
-            <input
-              type="radio"
-              name="quorumType"
-              id="quorumType"
-              value="23"
-            >
-            <span> Two-Thirds</span>
+            <span class="percent-symbol">%</span>
         </div>
         <div id="waivedUsers" class="form-group" style="display:none">
           <input
@@ -124,7 +119,7 @@
       function onGatekeepChange(){
         const gatekeepBox = document.getElementById("gatekeep");
         const waivedUsers = document.getElementById("waivedUsers");
-        const quorumType = document.getElementById("quorumTypeGroup");
+        const quorumType = document.getElementById("quorumType");
         if (gatekeepBox.checked){
           waivedUsers.style.display = null
             quorumType.style.display = null
