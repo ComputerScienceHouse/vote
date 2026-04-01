@@ -1,0 +1,115 @@
+{{ define "header.tmpl" }}
+  <!DOCTYPE html>
+  <html lang="en">
+    <head>
+      <title>CSH Vote</title>
+      <!-- <link rel="stylesheet" href="https://themeswitcher.csh.rit.edu/api/get" /> -->
+      <link
+        rel="stylesheet"
+        href="https://assets.csh.rit.edu/csh-material-bootstrap/5.3.8/dist/css/bootstrap.min.css"
+        media="screen"
+      />
+
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">      
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+      <script src="https://assets.csh.rit.edu/csh-material-bootstrap/5.3.8/dist/js/color-modes.js"></script>
+    </head>
+    <body>
+    <div class="dropdown position-fixed bottom-0 end-0 mb-3 me-3 bd-mode-toggle z-3">
+        <button class="btn btn-bd-primary py-2 dropdown-toggle d-flex align-items-center" id="bd-theme" type="button"
+                aria-expanded="false" data-bs-toggle="dropdown" aria-label="Toggle theme (dark)">
+            <svg class="bi my-1 theme-icon-active" height="16" width="16" aria-hidden="true">
+                <use href="#moon-stars-fill"></use>
+            </svg>
+            <span class="visually-hidden" id="bd-theme-text">Toggle theme</span>
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="bd-theme-text">
+          <li>
+            <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light" aria-pressed="false">
+              <svg class="bi me-2 opacity-50" height="16" width="16" aria-hidden="true">
+                <use href="#sun-fill"></use>
+              </svg>
+                Light
+              <svg class="bi ms-auto d-none" aria-hidden="true">
+                <use href="#check2"></use>
+              </svg>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="dropdown-item d-flex align-items-center active" data-bs-theme-value="dark" aria-pressed="true">
+              <svg class="bi me-2 opacity-50" height="16" width="16" aria-hidden="true">
+                <use href="#moon-stars-fill"></use>
+              </svg>
+                Dark
+              <svg class="bi ms-auto d-none" aria-hidden="true">
+                <use href="#check2"></use>
+              </svg>
+            </button>
+          </li>
+          <li>
+            <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="auto" aria-pressed="false">
+              <svg class="bi me-2 opacity-50" height="16" width="16" aria-hidden="true">
+                <use href="#circle-half"></use>
+              </svg>
+                Auto
+              <svg class="bi ms-auto d-none" aria-hidden="true">
+                <use href="#check2"></use>
+              </svg>
+            </button>
+          </li>
+        </ul>
+    </div>
+      <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+        <div class="container">
+          <a href="/"
+            class="d-flex align-items-center mb-3 mb-md-0 me-md-auto link-body-emphasis text-decoration-none">
+              <img class="object-fit-contain ms-2 me-2" height="32"
+                  src="https://assets.csh.rit.edu/pubsite/csh_logo_square.svg">
+              <span class="fs-4"><strong>Vote</strong></span>
+          </a>
+
+          <button class="navbar-toggler collapsed" type="button" data-toggle="collapse" data-target="#navbar"
+                  aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+          </button>
+          <div id="navbar" class="collapse navbar-collapse">
+            <a class="nav-item nav-link text-light" href="/"><i class="bi bi-exclamation-circle-fill"></i> Open Polls</a>
+            <a class="nav-item nav-link text-light" href="/closed"><i class="bi bi-archive-fill"></i> Closed Polls</a>
+            <a class="nav-item nav-link text-light" href="/create"><i class="bi bi-plus-circle-fill"></i> Create Poll</a>
+              {{ if .EBoard }}
+                <a class="nav-item nav-link text-light" href="/eboard"> E-Board</a>
+              {{ end }}
+
+            <ul class="nav navbar-nav navbar-right">
+                <li class="dropdown navbar-user">
+                    <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">
+                        <img src="https://profiles.csh.rit.edu/image/{{.Username}}">
+                        {{username}}
+                        <span class="caret"></span>
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a href="/dashboard"><i class="bi bi-globe-americas"></i> Dashboard</a></li>
+                        <li><a href="https://profiles.csh.rit.edu/user/{{.Username}}"><i class="bi bi-person-fill"></i> Profiles</a></li>
+                        <li role="separator" class="divider"></li>
+                        <li><a href="https://members.csh.rit.edu/"><i class="bi bi-globe-americas"></i> Members Portal</a></li>
+                        <li><a href="https://github.com/ComputerScienceHouse/vote/issues"><i class="bi bi-exclamation-circle"></i> Report an Issue</a></li>
+                        <li><a href="/logout"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+                    </ul>
+                </li>
+            </ul>
+            </div>
+          </div>
+
+        <script>
+            {{/* // Toggle the navbar when the hamburger menu is clicked
+            document.addEventListener('DOMContentLoaded', () => {
+                let toggler = document.querySelector('.dropdown');
+                let navbar = document.querySelector('.dropdown');
+                toggler.addEventListener('click', () => {
+                    navbar.classList.toggle('show');
+                });
+            }); */}}
+        </script>
+      </nav>
+{{ end }}

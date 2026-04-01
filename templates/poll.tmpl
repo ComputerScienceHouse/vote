@@ -1,21 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title>CSH Vote</title>
-    <!-- <link rel="stylesheet" href="https://themeswitcher.csh.rit.edu/api/get" /> -->
-    <link rel="stylesheet" href="https://assets.csh.rit.edu/csh-material-bootstrap/4.6.2/dist/csh-material-bootstrap.min.css" media="screen"/>
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">    
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-      input[type='number']{
-        width: 32px;
-      } 
-    </style>
-  </head>
-  <body>
-    {{ template "nav" . }}
+    {{ template "header.tmpl" . }}
 
     <div class="container main p-5">
       <h2 style="white-space: normal; word-wrap: break-word;">{{ .Title }}</h2>
@@ -103,3 +86,4 @@
     </div>
   </body>
 </html>
+
