@@ -84,19 +84,22 @@
             >
             <span> Gatekeep Required (Require Quorum, Limit Voters, Force Automatic Close)</span>
         </div>
-        <div id="quorumPercentInput">
-            <label for="quorumType">Quorum Type</span>
+        <div id="quorumPercentInput" class="form-group" style="display:none">
+            <label for="quorumType" class="quorum-label">Quorum Percentage</label>
             <input
               type="number"
               name="quorumType"
               id="quorumType"
+              class="form-control"
               min="0"
               max="100"
               step="1"
+              value="50"
+              style="width: 7em;"
             >
-            <span class="percent-symbol">%</span>
         </div>
         <div id="waivedUsers" class="form-group" style="display:none">
+          <label for="waivedUsers">Waived Users</label>
           <input
             type="text"
             name="waivedUsers"
@@ -119,15 +122,22 @@
       function onGatekeepChange(){
         const gatekeepBox = document.getElementById("gatekeep");
         const waivedUsers = document.getElementById("waivedUsers");
-        const quorumType = document.getElementById("quorumType");
+        const quorumType = document.getElementById("quorumPercentInput");
         if (gatekeepBox.checked){
           waivedUsers.style.display = null
-            quorumType.style.display = null
+          quorumType.style.display = null
         } else {
           waivedUsers.style.display = "none"
           quorumType.style.display = "none"
         }
       }
+
+      {{/* function onQuorumChange() {
+        const quorumInput = document.querySelector("#quorumType");
+        const currentQuorum = document.querySelector(".quorum-label");
+
+        currentQuorum.textContent = `Quorum Percentage: ${quorumInput.value}%`;
+      } */}}
     </script>
   </body>
 </html>
