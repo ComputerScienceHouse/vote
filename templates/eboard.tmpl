@@ -1,17 +1,5 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <title>CSH Vote</title>
-  <link rel="stylesheet"
-        href="https://assets.csh.rit.edu/csh-material-bootstrap/4.6.2/dist/csh-material-bootstrap.min.css"
-        media="screen">
+{{ template "header.tmpl" . }}
 
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">
-
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-</head>
-<body>
-{{ template "nav" . }}
 <div class="container main p-5">
   <h2>E-Board Vote</h2>
   <span>Current Votes Submitted: {{ .VoteCount }}</span>
