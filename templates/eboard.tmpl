@@ -14,6 +14,7 @@
 {{ template "nav" . }}
 <div class="container main p-5">
   <h2>E-Board Vote</h2>
+  <span>Current Votes Submitted: {{ .VoteCount }}</span>
   <div class="row">
     <div class="col-md-8">
       {{ if .Voted }}
