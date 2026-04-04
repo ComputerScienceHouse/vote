@@ -23,9 +23,10 @@ func HandleGetEboardVote(c *gin.Context) {
 	if votes == nil {
 		votes = make(map[string]float32)
 	}
-	fmt.Println(votes)
+	// fmt.Println(votes)
+	fmt.Println(user)
 	c.HTML(http.StatusOK, "eboard.tmpl", gin.H{
-		"Username": user,
+		"Username": user.Username,
 		"Voted":    slices.Contains(voters, user.Username),
 		"Results":  votes,
 		"Options":  OPTIONS,
