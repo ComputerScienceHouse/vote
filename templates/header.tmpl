@@ -14,75 +14,97 @@
               integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
               crossorigin="anonymous"></script>
 
-      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">      
+      <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons/font/bootstrap-icons.css">
+
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
       <script src="https://assets.csh.rit.edu/csh-material-bootstrap/5.3.8/dist/js/color-modes.js"></script>
     </head>
     <body>
-    <div id="theme-dropdown" class="dropdown position-fixed bottom-0 end-0 mb-3 me-3 bd-mode-toggle z-3">
-        <button class="btn btn-bd-primary py-2 dropdown-toggle d-flex align-items-center" id="bd-theme" type="button"
-                aria-expanded="false" data-bs-toggle="dropdown" aria-label="Toggle theme (dark)">
-            <svg class="bi my-1 theme-icon-active" height="16" width="16" aria-hidden="true">
-                <use href="#moon-stars-fill"></use>
-            </svg>
-            <span class="visually-hidden" id="bd-theme-text">Toggle theme</span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="bd-theme-text">
-          <li>
-            <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="light" aria-pressed="false">
-              <svg class="bi me-2 opacity-50" height="16" width="16" aria-hidden="true">
-                <use href="#sun-fill"></use>
-              </svg>
-                Light
-              <svg class="bi ms-auto d-none" aria-hidden="true">
-                <use href="#check2"></use>
-              </svg>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="dropdown-item d-flex align-items-center active" data-bs-theme-value="dark" aria-pressed="true">
-              <svg class="bi me-2 opacity-50" height="16" width="16" aria-hidden="true">
-                <use href="#moon-stars-fill"></use>
-              </svg>
-                Dark
-              <svg class="bi ms-auto d-none" aria-hidden="true">
-                <use href="#check2"></use>
-              </svg>
-            </button>
-          </li>
-          <li>
-            <button type="button" class="dropdown-item d-flex align-items-center" data-bs-theme-value="auto" aria-pressed="false">
-              <svg class="bi me-2 opacity-50" height="16" width="16" aria-hidden="true">
-                <use href="#circle-half"></use>
-              </svg>
-                Auto
-              <svg class="bi ms-auto d-none" aria-hidden="true">
-                <use href="#check2"></use>
-              </svg>
-            </button>
-          </li>
-        </ul>
-    </div>
+    
     <nav class="navbar navbar-expand-lg bg-primary fs-4 py-4 py-lg-2 px-3">
       <div class="container-lg justify-content-start">
         <img class="object-fit-contain ms-2 me-2" height="32" src="https://assets.csh.rit.edu/pubsite/csh_logo_square.svg" />
         <a class="navbar-brand fs-4 text-light" href="/">Vote</a>
         <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/"><i class="bi bi-exclamation-circle-fill mx-1"></i> Open Polls</a>
-          <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/closed"><i class="bi bi-exclamation-circle-fill mx-1"></i> Closed Polls</a>
-          <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/create"><i class="bi bi-exclamation-circle-fill mx-1"></i> Create Poll</a>
-          {{ if .IsEboard }}
-            <a class="nav navbar-nav nav-link text-light px-3" href="/eboard"><i class="bi bi-exclamation-circle-fill mx-1"></i> Eboard</a>
-          {{ end }}
+        <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/closed"><i class="bi bi-exclamation-circle-fill mx-1"></i> Closed Polls</a>
+        <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/create"><i class="bi bi-exclamation-circle-fill mx-1"></i> Create Poll</a>
+        {{ if .IsEboard }}
+          <a class="nav navbar-nav nav-link text-light px-3" href="/eboard"><i class="bi bi-exclamation-circle-fill mx-1"></i> Eboard</a>
+        {{ end }}
+
         <div class="nav navbar-nav ms-auto">
-          <div class="dropdown">
-            <a class="d-flex align-items-center link-body-emphasis text-decoration-none dropdown-toggle" href="#" data-bs-toggle="dropdown" aria-expanded="false">
-              <span class="text-light me-2" id="profile-name"></span>
-              <img id="profile-pic" class="rounded-circle" width="30px" height="30px" src="https://profiles.csh.rit.edu/image/{{.Username}}"/>
-            </a>
-            <ul class="dropdown-menu text-small">
-              <li><a href="/auth/logout" class="dropdown-item">Logout</a></li>
-            </ul>
+          <div class="d-flex align-items-center">
+            <div class="dropdown text-small">
+              <a class="d-flex align-items-center link-body-emphasis text-decoration-none dropdown-toggle" href="#"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="text-light me-2" id="profile-name"></span>
+                <img id="profile-pic" class="rounded-circle" width="30px" height="30px" src="https://profiles.csh.rit.edu/image/{{ .Username }}"/>
+              </a>
+
+              <ul class="dropdown-menu text-small">
+                <li><a href="https://profiles.csh.rit.edu" class="dropdown-item">Profiles</a></li>
+                <li><a href="https://members.csh.rit.edu" class="dropdown-item">Members</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a href="/auth/logout" class="dropdown-item">Logout</a></li>
+              </ul>
+            </div>
+
+            <div class="nav-item dropdown text-small px-3">
+              <button class="btn btn-link nav-link px-0 px-lg-2 dropdown-toggle d-flex align-items-center icon-link" id="bd-theme" type="button" aria-expanded="false" data-bs-toggle="dropdown" data-bs-display="static" aria-label="Toggle theme (auto)"> 
+                <svg class="bi my-1 theme-icon-active" aria-hidden="true">
+                  <use href="#circle-half"></use>
+                </svg>
+                <span class="d-lg-none ms-2" id="bd-theme-text">Toggle theme</span> 
+              </button>
+
+              <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="bd-theme-text">
+                <li>
+                  <button type="button" class="dropdown-item d-flex align-items-center icon-link" data-bs-theme-value="light" aria-pressed="false">
+                    <svg class="bi me-2 opacity-50" aria-hidden="true">
+                      <use href="#sun-fill">
+                        <svg id="sun-fill" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-sun" viewBox="0 0 16 16">
+                          <path d="M8 11a3 3 0 1 1 0-6 3 3 0 0 1 0 6m0 1a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
+                        </svg>
+                      </use>
+                    </svg>
+                      Light
+                    <svg class="bi ms-auto d-none" aria-hidden="true">
+                      <use href="#check2"></use>
+                    </svg>
+                  </button>
+                </li> 
+                <li>
+                  <button type="button" class="dropdown-item d-flex align-items-center icon-link" data-bs-theme-value="dark" aria-pressed="false">
+                    <svg class="bi me-2 opacity-50" aria-hidden="true">
+                      <use href="#moon-stars-fill">
+                        <svg id="moon-stars-fill" xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="bi bi-moon-stars-fill" viewBox="0 0 16 16">
+                          <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278"/>
+                          <path d="M10.794 3.148a.217.217 0 0 1 .412 0l.387 1.162c.173.518.579.924 1.097 1.097l1.162.387a.217.217 0 0 1 0 .412l-1.162.387a1.73 1.73 0 0 0-1.097 1.097l-.387 1.162a.217.217 0 0 1-.412 0l-.387-1.162A1.73 1.73 0 0 0 9.31 6.593l-1.162-.387a.217.217 0 0 1 0-.412l1.162-.387a1.73 1.73 0 0 0 1.097-1.097zM13.863.099a.145.145 0 0 1 .274 0l.258.774c.115.346.386.617.732.732l.774.258a.145.145 0 0 1 0 .274l-.774.258a1.16 1.16 0 0 0-.732.732l-.258.774a.145.145 0 0 1-.274 0l-.258-.774a1.16 1.16 0 0 0-.732-.732l-.774-.258a.145.145 0 0 1 0-.274l.774-.258c.346-.115.617-.386.732-.732z"/>
+                        </svg>
+                      </use>
+                    </svg>
+                      Dark
+                    <svg class="bi ms-auto d-none" aria-hidden="true">
+                      <use href="#check2"></use>
+                    </svg>
+                  </button>
+                </li> 
+                <li>
+                  <button type="button" class="dropdown-item d-flex align-items-center icon-link active" data-bs-theme-value="auto" aria-pressed="true">
+                    <svg class="bi me-2 opacity-50 p-0" aria-hidden="true">
+                      <use href="#circle-half">
+                        <symbol id="circle-half" viewBox="0 0 16 16"> <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"></path> </symbol>
+                      </use>
+                    </svg>
+                      Auto
+                    <svg class="bi ms-auto d-none" aria-hidden="true">
+                      <use href="#check2"></use>
+                    </svg>
+                  </button>
+                </li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>
