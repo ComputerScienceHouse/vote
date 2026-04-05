@@ -24,13 +24,15 @@
     
     <nav class="navbar navbar-expand-lg bg-primary fs-4 py-4 py-lg-2 px-3">
       <div class="container-lg justify-content-start">
-        <img class="object-fit-contain ms-2 me-2" height="32" src="https://assets.csh.rit.edu/pubsite/csh_logo_square.svg" />
-        <a class="navbar-brand fs-4 text-light" href="/">Vote</a>
+        <a class="navbar-brand fs-4 text-light" href="/">
+          <img class="object-fit-contain ms-2" height="32" src="https://assets.csh.rit.edu/pubsite/csh_logo_square.svg" />
+          Vote
+        </a>
         <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/"><i class="bi bi-exclamation-circle-fill mx-1"></i> Open Polls</a>
-        <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/closed"><i class="bi bi-exclamation-circle-fill mx-1"></i> Closed Polls</a>
-        <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/create"><i class="bi bi-exclamation-circle-fill mx-1"></i> Create Poll</a>
-        {{ if .IsEboard }}
-          <a class="nav navbar-nav nav-link text-light px-3" href="/eboard"><i class="bi bi-exclamation-circle-fill mx-1"></i> Eboard</a>
+        <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/closed"><i class="bi bi-archive-fill mx-1"></i> Closed Polls</a>
+        <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/create"><i class="bi bi-plus-circle-fill mx-1"></i> Create Poll</a>
+        {{ if .EBoard }}
+          <a class="nav navbar-nav nav-link fs-6 text-light px-3" href="/eboard"><i class="bi bi-lock-fill mx-1"></i> Eboard</a>
         {{ end }}
 
         <div class="nav navbar-nav ms-auto">
