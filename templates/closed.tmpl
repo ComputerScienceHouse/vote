@@ -5,16 +5,16 @@
       </h2>
       <br />
       <div>
-        <ul class="list-group">
+        <ul class="list-group list-unstyled text-wrap text-break">
           {{ range $i, $poll := .ClosedPolls }}
           <li>
             <a
-              class="list-group-item list-group-item-action"
+              class="list-group-item list-group-item-action p-3"
               href="/results/{{ $poll.Id }}"
             >
-              <span style="font-size: 1.1rem">
+              <span><strong>
                 {{ $poll.Title }}
-              </span>
+              </strong></span>
 
               <span
                 ><i>(created by {{ $poll.CreatedBy }})</i></span

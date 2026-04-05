@@ -1,26 +1,26 @@
     {{ template "header.tmpl" . }}
     
     <div class="container main p-5">
-      <h2>
-        <div class="d-inline">Active Polls</div>
-        <div class="d-inline float-right">
-          <a class="btn btn-primary" role="button" href="/create">
+      <h2 class="d-inline-flex w-100 justify-content-between mb-3">
+        <div class="">Active Polls</div>
+        <div>
+          <a class="btn btn-primary py-2 px-3" role="button" href="/create">
             Create Poll
           </a>
         </div>
       </h2>
       <br />
       <div>
-        <ul class="list-group">
+        <ul class="list-group list-unstyled text-wrap text-break">
           {{ range $i, $poll := .Polls }}
           <li>
             <a
-              class="list-group-item list-group-item-action"
+              class="list-group-item list-group-item-action p-3"
               href="/poll/{{ $poll.Id }}"
             >
-              <span style="font-size: 1.1rem; white-space: normal; word-wrap: break-word;">
+              <span><strong>
                 {{ $poll.Title }}
-              </span>
+              </strong></span>
 
               <span
                 ><i>(created by {{ $poll.CreatedBy }})</i></span
