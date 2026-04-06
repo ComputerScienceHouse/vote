@@ -3,26 +3,27 @@
     <div class="container main p-5">
       <h2 class="mb-4">Create Poll</h2>
       <form action="/create" method="POST">
-        <div class="input-group">
-          <label for="title" class="input-group-text">Poll Title</label>
+        <div class="input-group needs-validation">
+          <label for="title" class="input-group-text required-label">Poll Title</label>
           <input
             type="text"
             class="form-control"
             name="title"
-            placeholder="Example Poll"
+            placeholder="My Poll"
+            required
           >
         </div>
         <div class="input-group my-3">
-          <label for="description" class="input-group-text">Description (Optional)</label>
+          <label for="description" class="input-group-text">Description</label>
           <input
             type="text"
             name="description"
             class="form-control"
-            placeholder="An example poll to show how to create a poll"
+            placeholder="description"
           >
         </div>
         <div class="input-group my-3">
-          <label for="options" class="input-group-text">Poll Options</label>
+          <label for="options" class="input-group-text required-label">Options</label>
           <select name="options" id="options" onChange="onOptionsChange()" class="form-select">
             <option value="pass_fail" selected>Pass/Fail</option>
             <option value="pass-fail-conditional">
@@ -86,8 +87,8 @@
               >
               <label for="gatekeep"> Gatekeep Required (Require Quorum, Limit Voters, Force Automatic Close)</label>
           </div>
-          <div id="quorumPercentInput" class="input-group d-none w-25 my-3">
-            <label for="quorumType" class="input-group-text">Quorum Percent</label>
+          <div id="quorumPercentInput" class="input-group d-none w-auto my-3">
+            <label for="quorumType" class="input-group-text">Quorum %</label>
             <input
               type="number"
               name="quorumType"
@@ -105,7 +106,7 @@
               type="text"
               name="waivedUsers"
               class="form-control"
-              placeholder="Enter a comma separated list of usernames"
+              placeholder="Comma separated list of usernames"
             >
           </div>
         </div>
@@ -114,6 +115,13 @@
         <input type="submit" class="btn btn-primary" value="Create">
       </form>
     </div>
+
+    <style>
+      .required-label::after {
+        content: " *";
+        color: red;
+      }
+    </style>
     <script>
       function onOptionsChange() {
         if (document.getElementById("options").value == "custom") {
@@ -134,6 +142,25 @@
           quorumType.classList.add('d-none');
         }
       }
+
+      (() => {
+        'use strict'
+
+        // Fetch all the forms we want to apply custom Bootstrap validation styles to
+        const forms = document.querySelectorAll('.needs-validation')
+
+        // Loop over them and prevent submission
+        Array.from(forms).forEach(form => {
+          form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+              event.preventDefault()
+              event.stopPropagation()
+            }
+
+            form.classList.add('was-validated')
+          }, false)
+        })
+      })()
     </script>
   </body>
 </html>
