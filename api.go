@@ -141,15 +141,9 @@ func CreatePoll(c *gin.Context) {
 	}
 
 	quorumType := c.PostForm("quorumType")
-	var quorum float64
-	switch quorumType {
-	case "12":
-		quorum = 1.0 / 2.0
-	case "23":
-		quorum = 2.0 / 3.0
-	default:
-		quorum = 1.0 / 2.0
-	}
+
+	quorum, err := strconv.ParseFloat(quorumType, 64)
+	quorum = quorum / 100
 
 	poll := &database.Poll{
 		Id:            "",
@@ -159,7 +153,7 @@ func CreatePoll(c *gin.Context) {
 		VoteType:      database.POLL_TYPE_SIMPLE,
 		OpenedTime:    time.Now(),
 		Open:          true,
-		QuorumType:    float64(quorum),
+		QuorumType:    quorum,
 		Gatekeep:      c.PostForm("gatekeep") == "true",
 		AllowWriteIns: c.PostForm("allowWriteIn") == "true",
 		Hidden:        c.PostForm("hidden") == "true",
@@ -250,7 +244,6 @@ func GetPollResults(c *gin.Context) {
 
 	canModify := IsActiveRTP(user) || IsEboard(user) || ownsPoll(poll, user)
 
-	votesNeededForQuorum := int(poll.QuorumType * float64(len(poll.AllowedUsers)))
 	c.HTML(http.StatusOK, "result.tmpl", gin.H{
 		"Id":                   poll.Id,
 		"Title":                poll.Title,
@@ -267,7 +260,7 @@ func GetPollResults(c *gin.Context) {
 		"Gatekeep":             poll.Gatekeep,
 		"Quorum":               strconv.FormatFloat(poll.QuorumType*100.0, 'f', 0, 64),
 		"EligibleVoters":       poll.AllowedUsers,
-		"VotesNeededForQuorum": votesNeededForQuorum,
+		"VotesNeededForQuorum": CalculateQuorum(*poll),
 	})
 }
 

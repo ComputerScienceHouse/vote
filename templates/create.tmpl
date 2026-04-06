@@ -1,26 +1,29 @@
     {{ template "header.tmpl" . }}
 
     <div class="container main p-5">
-      <h2>Create Poll</h2>
+      <h2 class="mb-4">Create Poll</h2>
       <form action="/create" method="POST">
-        <div class="form-group">
+        <div class="input-group">
+          <label for="title" class="input-group-text">Poll Title</label>
           <input
             type="text"
             class="form-control"
             name="title"
-            placeholder="Poll Title"
+            placeholder="Example Poll"
           >
         </div>
-        <div class="form-group">
+        <div class="input-group my-3">
+          <label for="description" class="input-group-text">Description (Optional)</label>
           <input
             type="text"
             name="description"
             class="form-control"
-            placeholder="Description (Optional)"
+            placeholder="An example poll to show how to create a poll"
           >
         </div>
-        <div class="form-group">
-          <select name="options" id="options" onChange="onOptionsChange()" class="form-control">
+        <div class="input-group my-3">
+          <label for="options" class="input-group-text">Poll Options</label>
+          <select name="options" id="options" onChange="onOptionsChange()" class="form-select">
             <option value="pass_fail" selected>Pass/Fail</option>
             <option value="pass-fail-conditional">
               Pass/Fail or Conditional
@@ -29,96 +32,106 @@
             <option value="custom">Custom</option>
           </select>
         </div>
-        <div style="display:none;" id="customOptions" class="form-group">
+        <div id="customOptions" class="input-group d-none my-3">
+          <label for="customOptions" class="input-group-text">Custom Options</label>
           <input
             type="text"
             name="customOptions"
             class="form-control"
-            placeholder="Custom Options (Comma-separated)"
+            placeholder="Enter a comma separated list of custom options"
           >
         </div>
-        <div class="form-group">
+
+        <h5 class="mt-4 text-decoration-underline">Additional Settings</h5>
+        <div class="form-check form-switch fs-5">
           <input
+            class="form-check-input"
             type="checkbox"
+            role="switch"
             name="allowWriteIn"
             value="true"
           >
-          <span>Allow Write-In Votes</span>
+          <label for="allowWriteIn" class="form-check-label">Allow Write-Ins</label>
         </div>
-        <div class="form-group">
+        <div class="form-check form-switch fs-5">
           <input
+            class="form-check-input"
             type="checkbox"
             name="rankedChoice"
             value="true"
           >
-          <span>Ranked Choice Vote</span>
+          <label for="rankedChoice" class="form-check-label">Ranked Choice Vote</label>
         </div>
-        <div class="form-group">
+        <div class="form-check form-switch fs-5">
           <input
+            class="form-check-input"
             type="checkbox"
             name="hidden"
             value="true"
           >
-          <span>Hide Results Until Vote is Complete</span>
+          <label for="hidden" class="form-check-label">Hide Results Until Vote is Complete</label>
         </div>
-        {{ if .IsEboard }}
-        <div class="form-group">
+        
+        {{ if .EBoard }}
+        <div id="eboard-options" class="my-4">
+          <h5 class="text-decoration-underline">E-Board Options</h5>
+          <div class="form-check form-switch fs-5">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                name="gatekeep"
+                id="gatekeep"
+                value="true"
+                onchange="onGatekeepChange()"
+              >
+              <label for="gatekeep"> Gatekeep Required (Require Quorum, Limit Voters, Force Automatic Close)</label>
+          </div>
+          <div id="quorumPercentInput" class="input-group d-none w-25 my-3">
+            <label for="quorumType" class="input-group-text">Quorum Percent</label>
             <input
-              type="checkbox"
-              name="gatekeep"
-              id="gatekeep"
-              value="true"
-              onchange="onGatekeepChange()"
-            >
-            <span> Gatekeep Required (Require Quorum, Limit Voters, Force Automatic Close)</span>
-        </div>
-        <div id="quorumTypeGroup" class="form-group" style="display:none">
-            <span>Quorum Type</span>
-            <input
-              type="radio"
+              type="number"
               name="quorumType"
               id="quorumType"
-              value="12"
+              class="form-control"
+              min="0"
+              max="100"
+              step="1"
+              value="50"
             >
-            <span> One-Half</span>
+          </div>
+          <div id="waivedUsers" class="input-group d-none">
+            <label for="waivedUsers" class="input-group-text">Waived Users</label>
             <input
-              type="radio"
-              name="quorumType"
-              id="quorumType"
-              value="23"
+              type="text"
+              name="waivedUsers"
+              class="form-control"
+              placeholder="Enter a comma separated list of usernames"
             >
-            <span> Two-Thirds</span>
-        </div>
-        <div id="waivedUsers" class="form-group" style="display:none">
-          <input
-            type="text"
-            name="waivedUsers"
-            class="form-control"
-            placeholder="Waive Usernames (Comma-separated)"
-          >
+          </div>
         </div>
         {{ end }}
+
         <input type="submit" class="btn btn-primary" value="Create">
       </form>
     </div>
     <script>
       function onOptionsChange() {
         if (document.getElementById("options").value == "custom") {
-          document.getElementById("customOptions").style.display = null;
+          document.getElementById("customOptions").classList.remove('d-none');
         } else {
-          document.getElementById("customOptions").style.display = "none";
+          document.getElementById("customOptions").classList.add('d-none');
         }
       }
       function onGatekeepChange(){
         const gatekeepBox = document.getElementById("gatekeep");
         const waivedUsers = document.getElementById("waivedUsers");
-        const quorumType = document.getElementById("quorumTypeGroup");
+        const quorumType = document.getElementById("quorumPercentInput");
         if (gatekeepBox.checked){
-          waivedUsers.style.display = null
-            quorumType.style.display = null
+          waivedUsers.classList.remove('d-none');
+          quorumType.classList.remove('d-none');
         } else {
-          waivedUsers.style.display = "none"
-          quorumType.style.display = "none"
+          waivedUsers.classList.add('d-none');
+          quorumType.classList.add('d-none');
         }
       }
     </script>
