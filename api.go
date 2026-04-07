@@ -103,7 +103,6 @@ func GetPollById(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/results/"+poll.Id)
 		return
 	}
-
 	writeInAdj := 0
 	if poll.AllowWriteIns {
 		writeInAdj = 1
@@ -254,12 +253,15 @@ func GetPollResults(c *gin.Context) {
 		})
 		return
 	}
+
+	fmt.Println(len(results))
 	c.HTML(http.StatusOK, "result.tmpl", gin.H{
 		"Id":                   poll.Id,
 		"Title":                poll.Title,
 		"Description":          poll.Description,
 		"VoteType":             poll.VoteType,
 		"Results":              results,
+		"NumVotes":             len(results),
 		"IsOpen":               poll.Open,
 		"IsHidden":             poll.Hidden,
 		"CanModify":            canModify,
