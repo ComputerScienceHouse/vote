@@ -25,11 +25,12 @@ func HandleGetEboardVote(c *gin.Context) {
 	}
 	fmt.Println(user)
 	c.HTML(http.StatusOK, "eboard.tmpl", gin.H{
-		"Username": user.Username,
-		"EBoard":   IsEboard(user),
-		"Voted":    slices.Contains(voters, user.Username),
-		"Results":  votes,
-		"Options":  OPTIONS,
+		"Username":  user.Username,
+		"EBoard":    IsEboard(user),
+		"Voted":     slices.Contains(voters, user.Username),
+		"Results":   votes,
+		"VoteCount": len(voters),
+		"Options":   OPTIONS,
 	})
 }
 
