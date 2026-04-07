@@ -12,13 +12,13 @@
               class="list-group-item list-group-item-action p-3"
               href="/results/{{ $poll.Id }}"
             >
-              <span><strong>
-                {{ $poll.Title }}
-              </strong></span>
+              <span>
+                <strong>{{ $poll.Title }}</strong>
+              </span>
 
-              <span
-                ><i>(created by {{ $poll.CreatedBy }})</i></span
-              >
+              <span>
+                <i>(created by {{ $poll.CreatedBy }})</i>
+              </span>
             </a>
           </li>
           {{ end }}

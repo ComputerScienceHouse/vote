@@ -35,15 +35,15 @@
       {{/* Displays information about required quorum and number of voters */}}
       <div id="quorum-info">
         <h6>Number of Eligible Voters: {{ len .EligibleVoters }}</h6>
+        <h6>Votes Cast: {{ .NumVotes }}</h6>
+        <br class="lh-1" />
         <div id="votes-needed-for-quorum">
           {{/* This works currently because quorum type can only be set if gatekeep is required */}}
           {{ if not .Gatekeep }}
             <h6>No quorum required for this poll.</h6>
-            <h6>Votes Cast: {{ .NumVotes }}</h6>
           {{ else }}
             <h6>Quorum Type: {{ .Quorum }}%</h6>
             <h6>Votes Needed For Quorum: {{ .VotesNeededForQuorum }}</h6>
-            <h6>Votes Cast: {{ .NumVotes }}</h6>
           {{ end }}
           <br/>
           <br/>
