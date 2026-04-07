@@ -32,12 +32,6 @@
       <br />
       <br />
 
-      {{ if and $.IsHidden $.IsOpen }}
-      <div id="results">
-        <h4>Results will be available once the poll closes</h4>
-      </div>
-      {{ else }}
-      
       {{/* Displays information about required quorum and number of voters */}}
       <div id="quorum-info">
         <h6>Number of Eligible Voters: {{ len .EligibleVoters }}</h6>
@@ -66,7 +60,6 @@
           {{ end }}
         {{ end }}
       </div>
-      {{ end }}
       {{ if and (.CanModify) (not .IsHidden) }}
       <br />
       <br />

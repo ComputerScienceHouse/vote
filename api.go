@@ -244,6 +244,16 @@ func GetPollResults(c *gin.Context) {
 
 	canModify := IsActiveRTP(user) || IsEboard(user) || ownsPoll(poll, user)
 
+	if poll.Hidden && poll.Open {
+		c.HTML(http.StatusUnauthorized, "hidden.tmpl", gin.H{
+			"Id":          poll.Id,
+			"Title":       poll.Title,
+			"Description": poll.Description,
+			"Username":    user.Username,
+			"FullName":    user.FullName,
+		})
+		return
+	}
 	c.HTML(http.StatusOK, "result.tmpl", gin.H{
 		"Id":                   poll.Id,
 		"Title":                poll.Title,

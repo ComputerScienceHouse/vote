@@ -1,19 +1,14 @@
     {{ template "header.tmpl" . }}
 
-    <div
-      style="text-align: center; font-size: 1.2rem"
-      class="main p-5 error-page align-center"
-    >
-      <img id="lockdown" src="/static/material_lock.svg" alt="Attention!" />
-      <br />
-      <h2>You're not authorized to vote!</h2>
-      <p>
+    <div class="main p-5 error-page text-center">
+      <img id="lockdown" src="/static/material_lock.svg" alt="Attention!" width="256"/>
+      <h1 class="my-4">You're not authorized to vote!</h1>
+      <p class="fs-4 my-3">
         It looks like you're either not marked as active, or you're on co-op
         right now
       </p>
-      <p>
-        If you think this is in error, try logging out and in again. If that doesn't work,
-        please contact the Evaluations director or an RTP
+      <p class="fs-4">
+        If you think this is an error, try logging out and back in. If that doesn't work, contact an RTP.
       </p>
     </div>
   </body>
