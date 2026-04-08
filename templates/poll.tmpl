@@ -16,14 +16,14 @@
       <form action="/poll/{{ .Id }}" method="POST">
       {{ if eq .PollType "simple" }}
         {{ range $i, $option := .Options }}
-        <div class="form-check fs-4">
+        <div class="form-check fs-4 lh-sm">
           <input class="form-check-input" type="radio" name="option" id="{{ $option }}" value="{{ $option }}" />
           <label class="form-check-label" for="{{ $option }}">{{ $option }}</label>
         </div>
         <br />
         {{ end }}
         {{ if .AllowWriteIns }}
-        <div class="form-check fs-4">
+        <div class="form-check fs-4 lh-sm">
           <input class="form-check-input" type="radio" name="option" value="writein" />
           <input
             type="text"
