@@ -254,14 +254,21 @@ func GetPollResults(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(len(results))
+	numVotes := 0
+
+	for _, v := range results {
+		for key := range v {
+			numVotes += v[key]
+		}
+	}
+
 	c.HTML(http.StatusOK, "result.tmpl", gin.H{
 		"Id":                   poll.Id,
 		"Title":                poll.Title,
 		"Description":          poll.Description,
 		"VoteType":             poll.VoteType,
 		"Results":              results,
-		"NumVotes":             len(results),
+		"NumVotes":             numVotes,
 		"IsOpen":               poll.Open,
 		"IsHidden":             poll.Hidden,
 		"CanModify":            canModify,
