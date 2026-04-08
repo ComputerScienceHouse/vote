@@ -1,44 +1,14 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title>CSH Vote</title>
-    <!-- <link rel="stylesheet" href="https://themeswitcher.csh.rit.edu/api/get" /> -->
-    <link
-      rel="stylesheet"
-      href="https://assets.csh.rit.edu/csh-material-bootstrap/4.6.2/dist/csh-material-bootstrap.min.css"
-      media="screen"
-    />
+    {{ template "header.tmpl" . }}
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">    
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>
-      #lockdown {
-        width: 20%;
-        height: auto;
-        display: block;
-        margin-left: auto;
-        margin-right: auto;
-      }
-    </style>
-  </head>
-  <body>
-    {{ template "nav" . }}
-
-    <div
-      style="text-align: center; font-size: 1.2rem"
-      class="main p-5 error-page align-center"
-    >
-      <img id="lockdown" src="/static/material_lock.svg" alt="Attention!" />
-      <br />
-      <h2>You're not authorized to vote!</h2>
-      <p>
+    <div class="main p-5 error-page text-center">
+      <img id="lockdown" src="/static/material_lock.svg" alt="Attention!" width="256"/>
+      <h1 class="my-4">You're not authorized to vote!</h1>
+      <p class="fs-4 my-3">
         It looks like you're either not marked as active, or you're on co-op
         right now
       </p>
-      <p>
-        If you think this is in error, try logging out and in again. If that doesn't work,
-        please contact the Evaluations director or an RTP
+      <p class="fs-4">
+        If you think this is an error, try logging out and back in. If that doesn't work, contact an RTP.
       </p>
     </div>
   </body>
