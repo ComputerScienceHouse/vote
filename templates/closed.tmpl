@@ -1,46 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-  <head>
-    <title>CSH Vote</title>
-    <!-- <link rel="stylesheet" href="https://themeswitcher.csh.rit.edu/api/get" /> -->
-    <link
-      rel="stylesheet"
-      href="https://assets.csh.rit.edu/csh-material-bootstrap/4.6.2/dist/csh-material-bootstrap.min.css"
-      media="screen"
-    />
-
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css">    
-
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <style>
-      ul {
-        list-style: none;
-      }
-    </style>
-  </head>
-  <body>
-
-    {{ template "nav" . }}
+    {{ template "header.tmpl" . }}
     <div class="container main p-5">
       <h2>
         <div class="d-inline">Closed Polls</div>
       </h2>
       <br />
       <div>
-        <ul class="list-group">
+        <ul class="list-group list-unstyled text-wrap text-break">
           {{ range $i, $poll := .ClosedPolls }}
           <li>
             <a
-              class="list-group-item list-group-item-action"
+              class="list-group-item list-group-item-action p-3"
               href="/results/{{ $poll.Id }}"
             >
-              <span style="font-size: 1.1rem">
-                {{ $poll.Title }}
+              <span>
+                <strong>{{ $poll.Title }}</strong>
               </span>
 
-              <span
-                ><i>(created by {{ $poll.CreatedBy }})</i></span
-              >
+              <span>
+                <i>(created by {{ $poll.CreatedBy }})</i>
+              </span>
             </a>
           </li>
           {{ end }}
