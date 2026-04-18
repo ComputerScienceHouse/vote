@@ -51,15 +51,17 @@
       </div>
       <div id="results">
         {{ range $i, $val := .Results }}
-          {{ if eq $.VoteType "ranked" }}
-          <h4 class="mb-3"><u>Round {{ $i | inc }}</u></h4>
-          {{ end }}
-          {{ range $option, $count := $val }}
-          <div id="{{ $option }}" class="fs-5 lh-sm">
-            {{ $option }}: {{ $count }}
+          <div id="round-{{ $i }}">
+            {{ if eq $.VoteType "ranked" }}
+            <h4 class="mb-3"><u>Round {{ $i | inc }}</u></h4>
+            {{ end }}
+            {{ range $option, $count := $val }}
+            <div id="{{ $i }}-{{ $option }}" class="fs-5 lh-sm">
+              {{ $option }}: {{ $count }}
+            </div>
+            {{ end }}
           </div>
           <br />
-          {{ end }}
         {{ end }}
       </div>
       {{ if and (.CanModify) (not .IsHidden) }}
@@ -82,19 +84,20 @@
 
       eventSource.addEventListener("{{ .Id }}", function (event) {
         let data = JSON.parse(event.data);
-        if (data.length == 0) return;
-        let results = data[0];
-        for (let option in results) {
-          let count = results[option];
-          let element = document.getElementById(option);
-          if (element == null) {
-            let newElement = document.createElement("div");
-            newElement.id = option;
-            newElement.style = "font-size: 1.25rem; line-height: 1.25";
-            newElement.innerText = option + ": " + count;
-            document.getElementById("results").appendChild(newElement);
+        for (let roundNum in data) {
+          for (let option in data[roundNum]) {
+            let count = data[roundNum][option];
+            let element = document.getElementById(`${roundNum}-${option}`);
+            if (element == null) {
+              let newElement = document.createElement("div");
+              newElement.id = option;
+              newElement.style = "font-size: 1.25rem; line-height: 1.25";
+              newElement.innerText = option + ": " + count;
+              console.log(`round-${roundNum}`);
+              document.getElementById(`round-${roundNum}`).appendChild(newElement);
+            }
+            element.innerText = option + ": " + count;
           }
-          element.innerText = option + ": " + count;
         }
       });
     </script>
