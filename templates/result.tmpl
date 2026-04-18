@@ -15,7 +15,7 @@
         {{ else if gt .CanVote 1 }}
           <div id="cannot-vote" class="alert alert-warning fade show d-flex flex-row align-items-center" role="alert">
               <h5 class="m-0">
-                  You are not eligible to vote in this poll. This is likely because you are not an Active Member, 
+                  You are not eligible to vote in this poll. This is likely because you are not an Active Member,
                   or because you did not meet the gatekeep requirements by the time the poll opened.
                   If you believe this is an error, please contact Evals or Opcomm.
               </h5>
@@ -82,8 +82,10 @@
 
       eventSource.addEventListener("{{ .Id }}", function (event) {
         let data = JSON.parse(event.data);
-        for (let option in data) {
-          let count = data[option];
+        if (data.length == 0) return;
+        let results = data[0];
+        for (let option in results) {
+          let count = results[option];
           let element = document.getElementById(option);
           if (element == null) {
             let newElement = document.createElement("div");
