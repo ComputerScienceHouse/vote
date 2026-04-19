@@ -3,7 +3,7 @@ module github.com/computersciencehouse/vote
 go 1.24.1
 
 require (
-	github.com/computersciencehouse/csh-auth v0.1.0
+	github.com/computersciencehouse/csh-auth v0.0.0-20260418180545-3e68bcbf55a4
 	github.com/gin-gonic/gin v1.11.0
 	github.com/joho/godotenv v1.5.1
 	github.com/sirupsen/logrus v1.9.3
