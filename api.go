@@ -256,10 +256,8 @@ func GetPollResults(c *gin.Context) {
 
 	numVotes := 0
 
-	for _, v := range results {
-		for key := range v {
-			numVotes += v[key]
-		}
+	for key := range results[0] {
+		numVotes += results[0][key]
 	}
 
 	c.HTML(http.StatusOK, "result.tmpl", gin.H{
