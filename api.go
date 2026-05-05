@@ -139,6 +139,12 @@ func CreatePoll(c *gin.Context) {
 		return
 	}
 
+	// If title length exceeds 250 characters, return a bad request
+	if len(c.PostForm("title")) > 250 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "title length exceeds limit of 250 characters"})
+		return
+	}
+
 	quorumType := c.PostForm("quorumType")
 
 	quorum, err := strconv.ParseFloat(quorumType, 64)
