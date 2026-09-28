@@ -195,6 +195,10 @@ func CreatePoll(c *gin.Context) {
 		}
 		poll.AllowedUsers = GetEligibleVoters()
 		for user := range strings.SplitSeq(c.PostForm("waivedUsers"), ",") {
+			if len(user) == 0 { // When it's empty (and probably in other cases) the split can return an empty string, which changes the total
+				continue
+			}
+
 			poll.AllowedUsers = append(poll.AllowedUsers, strings.TrimSpace(user))
 		}
 	}
