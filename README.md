@@ -11,23 +11,7 @@ Implementation
 
 ## Configuration
 
-If you're using the compose file, you'll need to ask an RTP for the vote-dev OIDC secret, and set it as `VOTE_OIDC_SECRET` in your environment
-
-If you're not using the compose file, you'll need more of these
-
-```
-VOTE_HOST=http://localhost:8080
-VOTE_JWT_SECRET=
-VOTE_MONGODB_URI=
-VOTE_OIDC_ID=
-VOTE_OIDC_SECRET=
-VOTE_STATE=
-VOTE_TOKEN=
-VOTE_CONDITIONAL_URL=https://conditional.csh.rit.edu/gatekeep/
-VOTE_ANNOUNCEMENTS_CHANNEL_ID=
-VOTE_SLACK_APP_TOKEN=
-VOTE_SLACK_BOT_TOKEN=
-```
+Copy `.env.example` to `.env` and fill out the info
 
 ### Dev Overrides
 `DEV_DISABLE_ACTIVE_FILTERS="true"` will disable the requirements that you be active to vote
