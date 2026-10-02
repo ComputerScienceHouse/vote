@@ -116,7 +116,7 @@ func EvaluatePolls() {
 		quorum := CalculateQuorum(*poll)
 
 		notVoted := make([]*OIDCUser, 0)
-		notVotedString := make([]string, 0, len(notVoted))
+		notVotedString := make([]string, 0)
 		votedCount := 0
 		// check all voters to see if they have voted
 		if poll.AllowedUsers == nil {
@@ -154,14 +154,16 @@ func EvaluatePolls() {
 				}
 				notVotedString = append(notVotedString, "<@"+user.SlackUID+">")
 			}
-			// print non-voters to #announcements
-			_, _, err = slackData.Client.PostMessage(slackData.AnnouncementsChannel,
-				slack.MsgOptionText("It has been past the default time required to vote on \""+poll.Title+
-					"\" These people have not completed their responsibility as a Voting Member of House. \n"+
-					strings.Join(notVotedString, ","), false))
-			if err != nil {
-				logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls notVoted announce"}).Error(err)
-				continue
+			// print non-voters to #announcements if we can't close the vote
+			if !poll.OpenedTime.AddDate(0, 0, 2).After(now) {
+				_, _, err = slackData.Client.PostMessage(slackData.AnnouncementsChannel,
+					slack.MsgOptionText("It has been past the default time required to vote on \""+poll.Title+
+						"\" These people have not completed their responsibility as a Voting Member of House. \n"+
+						strings.Join(notVotedString, ","), false))
+				if err != nil {
+					logging.Logger.WithFields(logrus.Fields{"method": "EvaluatePolls notVoted announce"}).Error(err)
+					continue
+				}
 			}
 			continue
 		}
