@@ -81,8 +81,32 @@
         {{ end }}
       {{ end }}
         <br />
+        <div id="vote-error" class="alert alert-danger d-none" role="alert"></div>
         <button type="submit" class="btn btn-primary my-4 mx-4">Submit</button>
       </form>
+      <!-- Handle error messages -->
+      <script>
+        document.querySelector('form[action^="/poll/"]').addEventListener('submit', async function(e) {
+          e.preventDefault();
+          const form = e.target;
+          const errorEl = document.getElementById('vote-error');
+          errorEl.classList.add('d-none');
+
+          const res = await fetch(form.action, {
+            method: 'POST',
+            body: new FormData(form),
+          });
+
+          if (res.redirected) {
+            window.location.href = res.url;
+            return;
+          }
+
+          const data = await res.json();
+          errorEl.textContent = data.error ?? 'An unknown error occurred.';
+          errorEl.classList.remove('d-none');
+        });
+      </script>
       {{ if and (.CanModify) (not .Gatekeep) }}
         <form action="/poll/{{ .Id }}/close" method="POST">
           <button type="submit" class="btn btn-danger my-3 mx-4">End Poll</button>
