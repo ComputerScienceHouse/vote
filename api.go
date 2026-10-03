@@ -49,9 +49,7 @@ func GetHomepage(c *gin.Context) {
 
 	polls := []*database.Poll{}
 
-	for i := range pollResults {
-		poll := pollResults[i]
-
+	for _, poll := range pollResults {
 		if poll.HideForIneligible {
 			canVoteResult := canVote(user, *poll, poll.AllowedUsers)
 
@@ -60,7 +58,7 @@ func GetHomepage(c *gin.Context) {
 			}
 		}
 
-		polls = append(polls, pollResults[i])
+		polls = append(polls, poll)
 	}
 
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
