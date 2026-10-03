@@ -38,14 +38,30 @@ func GetHomepage(c *gin.Context) {
 	// A user may be unable to vote but should still be able to see a list of polls
 	user := GetUserData(c)
 
-	polls, err := database.GetOpenPolls(c)
+	pollResults, err := database.GetOpenPolls(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	sort.Slice(polls, func(i, j int) bool {
-		return polls[i].Id > polls[j].Id
+	sort.Slice(pollResults, func(i, j int) bool {
+		return pollResults[i].Id > pollResults[j].Id
 	})
+
+	polls := []*database.Poll{}
+
+	for i := range pollResults {
+		poll := pollResults[i]
+
+		if poll.HideForIneligible {
+			canVoteResult := canVote(user, *poll, poll.AllowedUsers)
+
+			if canVoteResult != 0 && canVoteResult != 9 {
+				continue
+			}
+		}
+
+		polls = append(polls, pollResults[i])
+	}
 
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"Polls":    polls,
@@ -151,17 +167,18 @@ func CreatePoll(c *gin.Context) {
 	quorum = quorum / 100
 
 	poll := &database.Poll{
-		Id:            "",
-		CreatedBy:     user.Username,
-		Title:         c.PostForm("title"),
-		Description:   c.PostForm("description"),
-		VoteType:      database.POLL_TYPE_SIMPLE,
-		OpenedTime:    time.Now(),
-		Open:          true,
-		QuorumType:    quorum,
-		Gatekeep:      c.PostForm("gatekeep") == "true",
-		AllowWriteIns: c.PostForm("allowWriteIn") == "true",
-		Hidden:        c.PostForm("hidden") == "true",
+		Id:                "",
+		CreatedBy:         user.Username,
+		Title:             c.PostForm("title"),
+		Description:       c.PostForm("description"),
+		VoteType:          database.POLL_TYPE_SIMPLE,
+		OpenedTime:        time.Now(),
+		Open:              true,
+		QuorumType:        quorum,
+		Gatekeep:          c.PostForm("gatekeep") == "true",
+		AllowWriteIns:     c.PostForm("allowWriteIn") == "true",
+		Hidden:            c.PostForm("hidden") == "true",
+		HideForIneligible: c.PostForm("hideIneligible") == "true",
 	}
 	if c.PostForm("rankedChoice") == "true" {
 		poll.VoteType = database.POLL_TYPE_RANKED
@@ -252,6 +269,19 @@ func GetPollResults(c *gin.Context) {
 	}
 
 	canModify := IsActiveRTP(user) || IsEboard(user) || ownsPoll(poll, user)
+
+	if poll.HideForIneligible {
+		canVoteResult := canVote(user, *poll, poll.AllowedUsers)
+
+		if canVoteResult != 0 && canVoteResult != 9 {
+			c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
+				"Username": user.Username,
+				"FullName": user.FullName,
+				"EBoard":   IsEboard(user),
+			})
+			return
+		}
+	}
 
 	if poll.Hidden && poll.Open {
 		c.HTML(http.StatusUnauthorized, "hidden.tmpl", gin.H{
