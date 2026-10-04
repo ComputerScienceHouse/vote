@@ -38,14 +38,28 @@ func GetHomepage(c *gin.Context) {
 	// A user may be unable to vote but should still be able to see a list of polls
 	user := GetUserData(c)
 
-	polls, err := database.GetOpenPolls(c)
+	pollResults, err := database.GetOpenPolls(c)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	sort.Slice(polls, func(i, j int) bool {
-		return polls[i].Id > polls[j].Id
+	sort.Slice(pollResults, func(i, j int) bool {
+		return pollResults[i].Id > pollResults[j].Id
 	})
+
+	polls := []*database.Poll{}
+
+	for _, poll := range pollResults {
+		if poll.HideForIneligible {
+			canVoteResult := canVote(user, *poll, poll.AllowedUsers)
+
+			if canVoteResult != 0 && canVoteResult != 9 {
+				continue
+			}
+		}
+
+		polls = append(polls, poll)
+	}
 
 	c.HTML(http.StatusOK, "index.tmpl", gin.H{
 		"Polls":    polls,
@@ -139,23 +153,30 @@ func CreatePoll(c *gin.Context) {
 		return
 	}
 
+	// If title length exceeds 250 characters, return a bad request
+	if len(c.PostForm("title")) > 250 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "title length exceeds limit of 250 characters"})
+		return
+	}
+
 	quorumType := c.PostForm("quorumType")
 
 	quorum, err := strconv.ParseFloat(quorumType, 64)
 	quorum = quorum / 100
 
 	poll := &database.Poll{
-		Id:            "",
-		CreatedBy:     user.Username,
-		Title:         c.PostForm("title"),
-		Description:   c.PostForm("description"),
-		VoteType:      database.POLL_TYPE_SIMPLE,
-		OpenedTime:    time.Now(),
-		Open:          true,
-		QuorumType:    quorum,
-		Gatekeep:      c.PostForm("gatekeep") == "true",
-		AllowWriteIns: c.PostForm("allowWriteIn") == "true",
-		Hidden:        c.PostForm("hidden") == "true",
+		Id:                "",
+		CreatedBy:         user.Username,
+		Title:             c.PostForm("title"),
+		Description:       c.PostForm("description"),
+		VoteType:          database.POLL_TYPE_SIMPLE,
+		OpenedTime:        time.Now(),
+		Open:              true,
+		QuorumType:        quorum,
+		Gatekeep:          c.PostForm("gatekeep") == "true",
+		AllowWriteIns:     c.PostForm("allowWriteIn") == "true",
+		Hidden:            c.PostForm("hidden") == "true",
+		HideForIneligible: c.PostForm("hideIneligible") == "true",
 	}
 	if c.PostForm("rankedChoice") == "true" {
 		poll.VoteType = database.POLL_TYPE_RANKED
@@ -189,6 +210,10 @@ func CreatePoll(c *gin.Context) {
 		}
 		poll.AllowedUsers = GetEligibleVoters()
 		for user := range strings.SplitSeq(c.PostForm("waivedUsers"), ",") {
+			if len(user) == 0 { // When it's empty (and probably in other cases) the split can return an empty string, which changes the total
+				continue
+			}
+
 			poll.AllowedUsers = append(poll.AllowedUsers, strings.TrimSpace(user))
 		}
 	}
@@ -243,6 +268,19 @@ func GetPollResults(c *gin.Context) {
 
 	canModify := IsActiveRTP(user) || IsEboard(user) || ownsPoll(poll, user)
 
+	if poll.HideForIneligible {
+		canVoteResult := canVote(user, *poll, poll.AllowedUsers)
+
+		if canVoteResult != 0 && canVoteResult != 9 {
+			c.HTML(http.StatusForbidden, "unauthorized.tmpl", gin.H{
+				"Username": user.Username,
+				"FullName": user.FullName,
+				"EBoard":   IsEboard(user),
+			})
+			return
+		}
+	}
+
 	if poll.Hidden && poll.Open {
 		c.HTML(http.StatusUnauthorized, "hidden.tmpl", gin.H{
 			"Id":          poll.Id,
@@ -256,10 +294,8 @@ func GetPollResults(c *gin.Context) {
 
 	numVotes := 0
 
-	for _, v := range results {
-		for key := range v {
-			numVotes += v[key]
-		}
+	for key := range results[0] {
+		numVotes += results[0][key]
 	}
 
 	c.HTML(http.StatusOK, "result.tmpl", gin.H{

@@ -6,7 +6,7 @@
       <h4>{{ .Description | MakeLinks }}</h4>
       {{ end }}
       {{ if eq .PollType "ranked" }}
-      <p>This is a Ranked Choice vote. Rank the candidates in order of your preference. 1 is most preferred, and {{ .RankedMax }} is least perferred. You may leave an option blank
+      <p>This is a Ranked Choice vote. Rank the candidates in order of your preference. 1 is most preferred, and {{ .RankedMax }} is least preferred. You may leave an option blank
       if you do not prefer it at all.</p>
       {{ end }}
 
