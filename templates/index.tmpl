@@ -18,18 +18,47 @@
               class="list-group-item list-group-item-action p-3"
               href="/poll/{{ $poll.Id }}"
             >
-              <span><strong>
-                {{ $poll.Title }}
-              </strong></span>
+                <strong>
+                  {{ $poll.Title }}
+                </strong>
 
-              <span
-                ><i>(created by {{ $poll.CreatedBy }})</i></span
-              >
+                <i>(created by {{ $poll.CreatedBy }})</i>
             </a>
           </li>
           {{ end }}
         </ul>
       </div>
     </div>
+    <script>
+      const handlePollEvent = function (event) {
+        const data = JSON.parse(event.data);
+
+        console.log(data);
+
+        const listItem = document.createElement("li");
+        const link = document.createElement("a");
+        const title = document.createElement("strong");
+        const author = document.createElement("i");
+
+        link.classList.add("list-group-item", "list-group-item-action", "p-3");
+        link.href = `/poll/${data.Id}`;
+
+        title.innerText = data.Title;
+
+        author.innerText = ` (created by ${data.CreatedBy})`;
+
+        link.appendChild(title);
+        link.appendChild(author);
+        listItem.appendChild(link);
+        document.querySelector("ul.list-group").prepend(listItem);
+
+        console.log(listItem);
+      }
+
+      let eventSource = new EventSource("/stream/new-polls");
+
+      eventSource.addEventListener("new-polls", handlePollEvent);
+      eventSource.addEventListener("new-polls-non-gatekeep", handlePollEvent);
+    </script>
   </body>
 </html>

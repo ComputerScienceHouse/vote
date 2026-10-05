@@ -26,8 +26,10 @@ package sse
 import (
 	"io"
 	"log"
+	"net/http"
 	"time"
 
+	cshAuth "github.com/computersciencehouse/csh-auth"
 	"github.com/gin-gonic/gin"
 )
 
@@ -54,21 +56,43 @@ type (
 
 		// Client connections registry
 		clients map[NotifierChan]struct{}
+
+		// Callbacks for cross-package access to main package functions
+		GetUser           func(*gin.Context) cshAuth.CSHUserInfo
+		IsActive          func(cshAuth.CSHUserInfo) bool
+		CheckUserGatekeep func(username string) bool
 	}
 )
 
-func NewBroker() (broker *Broker) {
+func NewBroker(getUser func(*gin.Context) cshAuth.CSHUserInfo, isActive func(cshAuth.CSHUserInfo) bool, checkUserGatekeep func(username string) bool) (broker *Broker) {
 	// Instantiate a broker
 	return &Broker{
-		Notifier:       make(NotifierChan, 1),
-		newClients:     make(chan NotifierChan),
-		closingClients: make(chan NotifierChan),
-		clients:        make(map[NotifierChan]struct{}),
+		Notifier:          make(NotifierChan, 1),
+		newClients:        make(chan NotifierChan),
+		closingClients:    make(chan NotifierChan),
+		clients:           make(map[NotifierChan]struct{}),
+		GetUser:           getUser,
+		IsActive:          isActive,
+		CheckUserGatekeep: checkUserGatekeep,
 	}
 }
 
 func (broker *Broker) ServeHTTP(c *gin.Context) {
 	eventName := c.Param("topic")
+
+	if eventName == "new-polls" {
+		user := broker.GetUser(c)
+
+		if broker.IsActive(user) {
+			if !broker.CheckUserGatekeep(user.Username) {
+				eventName = "new-polls-non-gatekeep"
+			}
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized SSE connection"})
+			c.Abort()
+			return
+		}
+	}
 
 	// Each connection registers its own message channel with the Broker's connections registry
 	messageChan := make(NotifierChan)

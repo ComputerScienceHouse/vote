@@ -18,6 +18,16 @@ Copy `.env.example` to `.env` and fill out the info
 `DEV_FORCE_IS_EBOARD="true"` will force vote to treat all users as E-Board members
 `DEV_FORCE_IS_EVALS="true"` will force vote to treat all users as the Evals director
 
+## Running Locally
+
+This project can be easily run using either `docker` or `podman`
+
+The run command is the same for both, just replace `podman` with `docker` if you perfer to use docker over podman
+
+```sh
+podman compose up
+```
+
 ## Linting
 These will be checked by CI
 
@@ -40,7 +50,7 @@ go vet *.go
 
 - [ ] Don't let the user fuck it up
 - [ ] Show E-Board polls with a higher priority
-- [x] Move Hide Vote to create instead of after you vote :skull:
+- [X] Move Hide Vote to create instead of after you vote :skull:
 - [X] Display the reason why a user is on the results page of a running poll
 - [ ] Display minimum time left that a poll is open
 - [ ] Move routes to their own functions 

@@ -224,6 +224,20 @@ func CreatePoll(c *gin.Context) {
 		return
 	}
 
+	poll.Id = pollId
+
+	if !(poll.Gatekeep && poll.HideForIneligible) {
+		broker.Notifier <- sse.NotificationEvent{
+			EventName: "new-polls-non-gatekeep",
+			Payload:   poll,
+		}
+	}
+
+	broker.Notifier <- sse.NotificationEvent{
+		EventName: "new-polls",
+		Payload:   poll,
+	}
+
 	c.Redirect(http.StatusFound, "/poll/"+pollId)
 }
 

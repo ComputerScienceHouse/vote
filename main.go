@@ -36,6 +36,13 @@ func MakeLinks(s string) template.HTML {
 	return template.HTML(safe)
 }
 
+// Checks whether the given user has met the gatekeep requirements.
+func checkUserGatekeep(username string) bool {
+	user := &OIDCUser{Username: username}
+	oidcClient.GetUserGatekeep(user)
+	return user.Gatekeep
+}
+
 var oidcClient = OIDCClient{}
 var broker *sse.Broker
 
@@ -49,7 +56,11 @@ func main() {
 		"MakeLinks": MakeLinks,
 	})
 	r.LoadHTMLGlob("templates/*")
-	broker = sse.NewBroker()
+	broker = sse.NewBroker(
+		GetUserData,
+		IsActive,
+		checkUserGatekeep,
+	)
 
 	csh := cshAuth.CSHAuth{}
 	csh.Init(
