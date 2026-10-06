@@ -34,7 +34,9 @@
 
       {{/* Displays information about required quorum and number of voters */}}
       <div id="quorum-info">
-        <h6>Number of Eligible Voters: {{ len .EligibleVoters }}</h6>
+        {{ if .Gatekeep }}
+          <h6>Number of Eligible Voters: {{ len .EligibleVoters }}</h6>
+        {{ end }}
         <h6>Votes Cast: {{ .NumVotes }}</h6>
         <br class="lh-1" />
         <div id="votes-needed-for-quorum">
