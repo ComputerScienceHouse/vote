@@ -224,6 +224,13 @@ func CreatePoll(c *gin.Context) {
 		return
 	}
 
+	poll.Id = pollId
+
+	broker.Notifier <- sse.NotificationEvent{
+		EventName: "new-polls",
+		Payload:   poll,
+	}
+
 	c.Redirect(http.StatusFound, "/poll/"+pollId)
 }
 
