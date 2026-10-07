@@ -226,13 +226,6 @@ func CreatePoll(c *gin.Context) {
 
 	poll.Id = pollId
 
-	if !(poll.Gatekeep && poll.HideForIneligible) {
-		broker.Notifier <- sse.NotificationEvent{
-			EventName: "new-polls-non-gatekeep",
-			Payload:   poll,
-		}
-	}
-
 	broker.Notifier <- sse.NotificationEvent{
 		EventName: "new-polls",
 		Payload:   poll,

@@ -58,7 +58,6 @@
       let eventSource = new EventSource("/stream/new-polls");
 
       eventSource.addEventListener("new-polls", handlePollEvent);
-      eventSource.addEventListener("new-polls-non-gatekeep", handlePollEvent);
     </script>
   </body>
 </html>

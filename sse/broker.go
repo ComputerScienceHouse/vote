@@ -26,10 +26,11 @@ package sse
 import (
 	"io"
 	"log"
-	"net/http"
+	"slices"
 	"time"
 
 	cshAuth "github.com/computersciencehouse/csh-auth"
+	"github.com/computersciencehouse/vote/database"
 	"github.com/gin-gonic/gin"
 )
 
@@ -58,41 +59,25 @@ type (
 		clients map[NotifierChan]struct{}
 
 		// Callbacks for cross-package access to main package functions
-		GetUser           func(*gin.Context) cshAuth.CSHUserInfo
-		IsActive          func(cshAuth.CSHUserInfo) bool
-		CheckUserGatekeep func(username string) bool
+		GetUser func(*gin.Context) cshAuth.CSHUserInfo
 	}
 )
 
-func NewBroker(getUser func(*gin.Context) cshAuth.CSHUserInfo, isActive func(cshAuth.CSHUserInfo) bool, checkUserGatekeep func(username string) bool) (broker *Broker) {
+func NewBroker(getUser func(*gin.Context) cshAuth.CSHUserInfo) (broker *Broker) {
 	// Instantiate a broker
 	return &Broker{
-		Notifier:          make(NotifierChan, 1),
-		newClients:        make(chan NotifierChan),
-		closingClients:    make(chan NotifierChan),
-		clients:           make(map[NotifierChan]struct{}),
-		GetUser:           getUser,
-		IsActive:          isActive,
-		CheckUserGatekeep: checkUserGatekeep,
+		Notifier:       make(NotifierChan, 1),
+		newClients:     make(chan NotifierChan),
+		closingClients: make(chan NotifierChan),
+		clients:        make(map[NotifierChan]struct{}),
+		GetUser:        getUser,
 	}
 }
 
 func (broker *Broker) ServeHTTP(c *gin.Context) {
 	eventName := c.Param("topic")
 
-	if eventName == "new-polls" {
-		user := broker.GetUser(c)
-
-		if broker.IsActive(user) {
-			if !broker.CheckUserGatekeep(user.Username) {
-				eventName = "new-polls-non-gatekeep"
-			}
-		} else {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized SSE connection"})
-			c.Abort()
-			return
-		}
-	}
+	username := broker.GetUser(c).Username
 
 	// Each connection registers its own message channel with the Broker's connections registry
 	messageChan := make(NotifierChan)
@@ -110,8 +95,18 @@ func (broker *Broker) ServeHTTP(c *gin.Context) {
 		// Emit Server Sent Events compatible
 		event := <-messageChan
 
-		switch eventName {
-		case event.EventName:
+		switch event.EventName {
+		case "new-polls":
+			payload, ok := event.Payload.(*database.Poll)
+
+			if !ok {
+				log.Fatal("Event payload is not of type database.Poll")
+			}
+
+			if !(payload.Gatekeep && payload.HideForIneligible) || slices.Contains(payload.AllowedUsers, username) {
+				c.SSEvent(event.EventName, event.Payload)
+			}
+		case eventName:
 			c.SSEvent(event.EventName, event.Payload)
 		}
 
