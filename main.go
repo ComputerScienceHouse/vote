@@ -49,7 +49,9 @@ func main() {
 		"MakeLinks": MakeLinks,
 	})
 	r.LoadHTMLGlob("templates/*")
-	broker = sse.NewBroker()
+	broker = sse.NewBroker(
+		GetUserData,
+	)
 
 	csh := cshAuth.CSHAuth{}
 	csh.Init(
