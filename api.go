@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"net/http"
@@ -20,6 +21,8 @@ import (
 	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
+
+const MAX_CUSTOM_OPTIONS = 50
 
 // Gets the number of people eligible to vote in a poll
 func GetVoterCount(poll database.Poll) int {
@@ -181,6 +184,10 @@ func CreatePoll(c *gin.Context) {
 	if c.PostForm("rankedChoice") == "true" {
 		poll.VoteType = database.POLL_TYPE_RANKED
 	}
+	if poll.VoteType == database.POLL_TYPE_RANKED && c.PostForm("options") != "custom" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "ranked choice polls must use custom options"})
+		return
+	}
 
 	switch c.PostForm("options") {
 	case "pass-fail-conditional":
@@ -188,12 +195,10 @@ func CreatePoll(c *gin.Context) {
 	case "fail-conditional":
 		poll.Options = []string{"Fail", "Conditional", "Abstain"}
 	case "custom":
-		poll.Options = []string{}
-		for opt := range strings.SplitSeq(c.PostForm("customOptions"), ",") {
-			poll.Options = append(poll.Options, strings.TrimSpace(opt))
-			if !slices.Contains(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
-				poll.Options = append(poll.Options, "Abstain")
-			}
+		poll.Options, err = parseCustomOptions(c.PostFormArray("customOptions"), poll.VoteType == database.POLL_TYPE_RANKED)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
 		}
 	case "pass-fail":
 	default:
@@ -611,6 +616,34 @@ func containsPoll(polls []*database.Poll, poll *database.Poll) bool {
 		}
 	}
 	return false
+}
+
+// Trims and validates custom poll options, appending Abstain for simple polls
+func parseCustomOptions(raw []string, ranked bool) ([]string, error) {
+	options := []string{}
+	seen := make(map[string]bool)
+	for _, opt := range raw {
+		opt = strings.TrimSpace(opt)
+		if opt == "" {
+			continue
+		}
+		key := strings.ToLower(opt)
+		if seen[key] {
+			return nil, fmt.Errorf("duplicate option: %s", opt)
+		}
+		seen[key] = true
+		options = append(options, opt)
+	}
+	if len(options) == 0 {
+		return nil, errors.New("at least one option is required")
+	}
+	if len(options) > MAX_CUSTOM_OPTIONS {
+		return nil, fmt.Errorf("a poll may have at most %d options", MAX_CUSTOM_OPTIONS)
+	}
+	if !ranked && !seen["abstain"] {
+		options = append(options, "Abstain")
+	}
+	return options, nil
 }
 
 func hasOption(poll *database.Poll, option string) bool {
