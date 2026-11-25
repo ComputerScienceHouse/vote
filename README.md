@@ -23,17 +23,18 @@ These will be checked by CI
 
 ```
 # tidy dependencies
+make tidy-check
 go mod tidy
 
 # format all code according to go standards
+make lint
 gofmt -w -s *.go logging sse database
 
 # run tests (database is the first place we've defined tests)
-go test ./database
+make test
 
 # run heuristic validation
-go vet ./database/ ./logging/ ./sse/
-go vet *.go
+make vet
 ```
 
 ## To-Dos
