@@ -10,7 +10,7 @@ ifeq ($(GO),)
 $(error Go not found in PATH)
 endif
 
-.PHONY: build run test vet fmt fmt-check lint tidy-check check coverage clean
+.PHONY: build run test vet fmt fmt-check tidy-check check coverage clean
 
 build:
 	$(GO) build -o bin/$(BINARY) .
@@ -35,12 +35,6 @@ fmt-check:
 		echo "$$out"; \
 		exit 1; \
 	fi
-
-lint:
-ifeq ($(LINT),)
-	$(error golangci-lint not found in PATH)
-endif
-	$(LINT) run
 
 tidy-check:
 	$(GO) mod tidy -diff
