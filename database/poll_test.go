@@ -142,6 +142,7 @@ func TestOrderOptions(t *testing.T) {
 		name   string
 		input  map[string]int
 		output []string
+		alt    []string
 	}{
 		{
 			name: "SimpleOrder",
@@ -201,7 +202,9 @@ func TestOrderOptions(t *testing.T) {
 				"three": 1,
 				"four":  2,
 			},
+			// ties resolve by map iteration order, so either duplicate may win
 			output: []string{"one", "three", "three", "four"},
+			alt:    []string{"one", "two", "two", "four"},
 		},
 		{
 			name: "Gap",
@@ -219,7 +222,11 @@ func TestOrderOptions(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 			defer cancel()
-			assert.Equal(t, test.output, orderOptions(ctx, test.input))
+			actual := orderOptions(ctx, test.input)
+			if test.alt != nil && assert.ObjectsAreEqual(test.alt, actual) {
+				return
+			}
+			assert.Equal(t, test.output, actual)
 		})
 	}
 }

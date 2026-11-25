@@ -31,7 +31,7 @@ jobs:
           gofmt -s -l database logging sse *.go
       - name: Run Tests
         run: |
-          go test ./database
+          go test ./...
       - name: Run vet
         run: |
           go vet ./database/ ./logging/ ./sse/

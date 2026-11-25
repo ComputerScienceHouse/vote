@@ -2,7 +2,7 @@
 
     <div class="container main p-5">
       <h2 class="mb-4">Create Poll</h2>
-      <form action="/create" method="POST">
+      <form id="createPollForm" action="/create" method="POST">
         <div class="input-group needs-validation">
           <label for="title" class="input-group-text required-label">Poll Title</label>
           <input
@@ -25,7 +25,14 @@
         </div>
         <div class="input-group my-3">
           <label for="options" class="input-group-text required-label">Options</label>
-          <select name="options" id="options" onChange="onOptionsChange()" class="form-select">
+          <select
+            name="options"
+            id="options"
+            onChange="onOptionsChange()"
+            class="form-select"
+            data-bs-title="Ranked Choice must use custom options"
+            data-bs-placement="top"
+          >
             <option value="pass_fail" selected>Pass/Fail</option>
             <option value="pass-fail-conditional">
               Pass/Fail or Conditional
@@ -34,14 +41,29 @@
             <option value="custom">Custom</option>
           </select>
         </div>
-        <div id="customOptions" class="input-group d-none my-3">
-          <label for="customOptions" class="input-group-text">Custom Vote Options</label>
-          <input
-            type="text"
-            name="customOptions"
-            class="form-control"
-            placeholder="Enter a comma separated list of custom vote options"
-          >
+        <div id="customOptions" class="d-none my-3">
+          <label class="form-label">Custom Vote Options</label>
+          <div id="optionList">
+            <div class="input-group has-validation mb-2 option-row">
+              <input type="text" name="customOptions" class="form-control" placeholder="input option here" disabled>
+              <button type="button" class="btn btn-outline-secondary remove-option" aria-label="Remove option">&times;</button>
+              <div class="invalid-feedback"></div>
+            </div>
+            <div class="input-group has-validation mb-2 option-row">
+              <input type="text" name="customOptions" class="form-control" placeholder="input option here" disabled>
+              <button type="button" class="btn btn-outline-secondary remove-option" aria-label="Remove option">&times;</button>
+              <div class="invalid-feedback"></div>
+            </div>
+          </div>
+          <template id="optionRowTemplate">
+            <div class="input-group has-validation mb-2 option-row">
+              <input type="text" name="customOptions" class="form-control" placeholder="input option here" disabled>
+              <button type="button" class="btn btn-outline-secondary remove-option" aria-label="Remove option">&times;</button>
+              <div class="invalid-feedback"></div>
+            </div>
+          </template>
+          <button type="button" id="addOptionBtn" class="btn btn-primary" onclick="addOptionRow()">+ Add Option</button>
+          <div id="maxOptionsNote" class="form-text d-none">Maximum of 50 options</div>
         </div>
 
         <h5 class="mt-4"><strong>Additional Settings</strong></h5>
@@ -60,7 +82,9 @@
             class="form-check-input"
             type="checkbox"
             name="rankedChoice"
+            id="rankedChoice"
             value="true"
+            onchange="onRankedChange()"
           >
           <label for="rankedChoice" class="form-check-label">Ranked Choice Vote</label>
         </div>
@@ -133,13 +157,112 @@
       }
     </style>
     <script>
+      const MAX_OPTIONS = 50;
+      const optionsSelect = document.getElementById("options");
+      const rankedChoice = document.getElementById("rankedChoice");
+      const optionList = document.getElementById("optionList");
+      const optionsTooltip = new bootstrap.Tooltip(optionsSelect, { trigger: 'hover focus' });
+      optionsTooltip.disable();
+
+      function disableTooltip() {
+        optionsTooltip.hide();
+        optionsTooltip.disable();
+      }
       function onOptionsChange() {
-        if (document.getElementById("options").value == "custom") {
-          document.getElementById("customOptions").classList.remove('d-none');
-        } else {
-          document.getElementById("customOptions").classList.add('d-none');
+        const isCustom = optionsSelect.value == "custom";
+        document.getElementById("customOptions").classList.toggle('d-none', !isCustom);
+        optionList.querySelectorAll('input').forEach(input => input.disabled = !isCustom);
+        if (!isCustom && rankedChoice.checked) {
+          rankedChoice.checked = false;
+          disableTooltip();
         }
       }
+      function onRankedChange() {
+        if (rankedChoice.checked) {
+          optionsSelect.value = "custom";
+          onOptionsChange();
+          optionsTooltip.enable();
+        } else {
+          disableTooltip();
+        }
+      }
+      function updateOptionControls() {
+        const rows = optionList.querySelectorAll('.option-row');
+        const atMax = rows.length >= MAX_OPTIONS;
+        document.getElementById("addOptionBtn").disabled = atMax;
+        document.getElementById("maxOptionsNote").classList.toggle('d-none', !atMax);
+        rows.forEach(row => row.querySelector('.remove-option').disabled = rows.length == 1);
+      }
+      function addOptionRow() {
+        if (optionList.querySelectorAll('.option-row').length >= MAX_OPTIONS) {
+          return;
+        }
+        const row = document.getElementById("optionRowTemplate").content.firstElementChild.cloneNode(true);
+        const input = row.querySelector('input');
+        input.disabled = optionsSelect.value != "custom";
+        optionList.appendChild(row);
+        input.focus();
+        updateOptionControls();
+      }
+      function validateCustomOptions() {
+        const inputs = Array.from(optionList.querySelectorAll('input'));
+        const seen = new Set();
+        let valid = true;
+        inputs.forEach(input => input.classList.remove('is-invalid'));
+        const markInvalid = (input, message) => {
+          input.classList.add('is-invalid');
+          input.parentElement.querySelector('.invalid-feedback').textContent = message;
+          valid = false;
+        };
+        inputs.forEach(input => {
+          const value = input.value.trim().toLowerCase();
+          if (value == "") {
+            return;
+          }
+          if (seen.has(value)) {
+            markInvalid(input, "Duplicate option");
+          }
+          seen.add(value);
+        });
+        if (seen.size == 0) {
+          markInvalid(inputs[0], "Enter at least one option");
+        }
+        return valid;
+      }
+
+      optionList.addEventListener('click', event => {
+        const button = event.target.closest('.remove-option');
+        if (!button || optionList.querySelectorAll('.option-row').length <= 1) {
+          return;
+        }
+        const row = button.closest('.option-row');
+        const neighbor = row.previousElementSibling || row.nextElementSibling;
+        row.remove();
+        neighbor.querySelector('input').focus();
+        updateOptionControls();
+      });
+
+      optionList.addEventListener('keydown', event => {
+        if (event.key == "Enter" && event.target.matches('input')) {
+          event.preventDefault();
+          addOptionRow();
+        }
+      });
+
+      optionList.addEventListener('input', event => event.target.classList.remove('is-invalid'));
+      document.getElementById("createPollForm").addEventListener('submit', event => {
+        if (optionsSelect.value == "custom" && !validateCustomOptions()) {
+          event.preventDefault();
+          optionList.querySelector('.is-invalid').focus();
+        }
+      });
+
+      onOptionsChange();
+      if (rankedChoice.checked) {
+        optionsTooltip.enable();
+      }
+      updateOptionControls();
+
       function onGatekeepChange(){
         const gatekeepBox = document.getElementById("gatekeep");
         const waivedUsers = document.getElementById("waivedUsers");
