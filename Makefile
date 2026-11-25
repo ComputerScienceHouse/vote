@@ -9,13 +9,13 @@ ifeq ($(GO),)
 $(error Go not found in PATH)
 endif
 
-.PHONY: build run test vet lint tidy-check check coverage clean
+.PHONY: build test vet lint tidy-check check coverage clean
 
 build:
 	$(GO) build -o bin/$(BINARY) .
 
 run:
-	$(GO) run .
+	docker-compose up
 
 test:
 	$(GO) test -count=1 ./database
