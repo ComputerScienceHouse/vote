@@ -7,7 +7,7 @@
       {{ end }}
       {{ if eq .PollType "ranked" }}
       <p>This is a Ranked Choice vote. Rank the candidates in order of your preference. 1 is most preferred, and {{ .RankedMax }} is least preferred. You may leave an option blank
-      if you do not prefer it at all.</p>
+      if you do not prefer it at all. You must rank in increasing order from 1, you cannot skip numbers.</p>
       {{ end }}
 
       <br />
@@ -81,7 +81,12 @@
         {{ end }}
       {{ end }}
         <br />
-        <button type="submit" class="btn btn-primary my-4 mx-4">Submit</button>
+        <button type="submit" class="btn btn-danger mt-4 mx-4" name="abstain" value="true">Abstain</button>
+        <div class="mx-4 col-6 mt-2">
+        <span><strong>Note</strong>: Pressing Abstain will submit this page. Abstain will add you to quorum but will empty your ballot options and you will not actually vote for anyone or count as a Vote Cast.</span>
+        </div>
+        <br />
+        <button type="submit" class="btn btn-primary my-4 mx-4">Submit Ballot</button>
       </form>
       {{ if and (.CanModify) (not .Gatekeep) }}
         <form action="/poll/{{ .Id }}/close" method="POST">
@@ -91,4 +96,3 @@
     </div>
   </body>
 </html>
-
