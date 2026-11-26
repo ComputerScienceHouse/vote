@@ -5,6 +5,7 @@ import (
 	"math"
 	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -236,13 +237,31 @@ func calculateRankedResult(ctx context.Context, votesRaw []RankedVote) ([]map[st
 		// Eliminate lowest vote getter
 		minVote := math.MaxInt         //the smallest number of votes received thus far (to find who is in last)
 		minPerson := make([]string, 0) //the person(s) with the least votes that need removed
+		eliminable := 0                //the number of remaining candidates that are allowed to be eliminated
 		for person, vote := range tallied {
+			// No Confidence can never be eliminated, skip it and move on to the next lowest
+			if isNoConfidence(person) {
+				continue
+			}
+			eliminable++
 			if vote < minVote { // this should always be true round one, to set a true "who is in last"
 				minVote = vote
 				minPerson = make([]string, 0)
 				minPerson = append(minPerson, person)
 			} else if vote == minVote {
 				minPerson = append(minPerson, person)
+			}
+		}
+		// If every remaining eliminable option is tied for last, eliminating them
+		// all would hand the vote to No Confidence. That's only fair if No
+		// Confidence had more votes than them (in which case they would have all
+		// been eliminated anyway), otherwise this is an unresolvable tie.
+		noConfidenceTie := false
+		if eliminable > 0 && len(minPerson) == eliminable {
+			for person, vote := range tallied {
+				if isNoConfidence(person) && vote <= minVote {
+					noConfidenceTie = true
+				}
 			}
 		}
 		eliminated = append(eliminated, minPerson...)
@@ -270,12 +289,18 @@ func calculateRankedResult(ctx context.Context, votesRaw []RankedVote) ([]map[st
 				end = false
 			}
 		}
-		if end {
+		if end || noConfidenceTie {
 			break
 		}
 	}
 	return finalResult, nil
 
+}
+
+// isNoConfidence reports whether an option is the "No Confidence" option,
+// which is never allowed to be eliminated from a ranked choice vote
+func isNoConfidence(option string) bool {
+	return strings.EqualFold(strings.TrimSpace(option), "no confidence")
 }
 
 func (poll *Poll) GetResult(ctx context.Context) ([]map[string]int, error) {
