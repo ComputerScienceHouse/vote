@@ -11,7 +11,7 @@ Implementation
 
 ## Configuration
 
-Copy `.env.example` to `.env` and fill out the info
+Copy `.env.example` to `.env` and fill out the fields. 
 
 ### Dev Overrides
 `DEV_DISABLE_ACTIVE_FILTERS="true"` will disable the requirements that you be active to vote
@@ -38,10 +38,9 @@ go vet *.go
 
 ## To-Dos
 
-- [ ] Don't let the user fuck it up
 - [ ] Show E-Board polls with a higher priority
 - [x] Move Hide Vote to create instead of after you vote :skull:
-- [X] Display the reason why a user is on the results page of a running poll
+- [x] Display the reason why a user is on the results page of a running poll
 - [ ] Display minimum time left that a poll is open
-- [ ] Move routes to their own functions 
-- [X] Change HTTP resposne codes to be `http.something` instead of just a number
+- [x] Move routes to their own functions 
+- [x] Change HTTP resposne codes to be `http.something` instead of just a number

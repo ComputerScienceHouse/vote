@@ -216,19 +216,19 @@ func calculateRankedResult(ctx context.Context, votesRaw []RankedVote) ([]map[st
 		votes = append(votes, optionList)
 	}
 
+	votesCast := len(votes)
+
 	round := 0
 	// Iterate until we have a winner
 	for {
 		round = round + 1
 		// Contains candidates to number of votes in this round
 		tallied := make(map[string]int)
-		voteCount := 0
 		for _, picks := range votes {
 			// Go over picks until we find a non-eliminated candidate
 			for _, candidate := range picks {
 				if !slices.Contains(eliminated, candidate) {
 					tallied[candidate]++
-					voteCount += 1
 					break
 				}
 			}
@@ -249,7 +249,7 @@ func calculateRankedResult(ctx context.Context, votesRaw []RankedVote) ([]map[st
 		finalResult = append(finalResult, tallied)
 
 		// TODO this should probably include some poll identifier
-		logging.Logger.WithFields(logrus.Fields{"round": round, "tallies": tallied, "threshold": voteCount / 2}).Debug("round report")
+		logging.Logger.WithFields(logrus.Fields{"round": round, "tallies": tallied, "threshold": votesCast / 2}).Debug("round report")
 
 		// If one person has all the votes, they win
 		if len(tallied) == 1 {
@@ -258,8 +258,8 @@ func calculateRankedResult(ctx context.Context, votesRaw []RankedVote) ([]map[st
 
 		end := true
 		for str, val := range tallied {
-			// if any particular entry is above half remaining votes, they win and it ends
-			if val > (voteCount / 2) {
+			// if any particular entry is above half of votes cast, they win and it ends
+			if val > (votesCast / 2) {
 				finalResult = append(finalResult, map[string]int{str: val})
 				end = true
 				break

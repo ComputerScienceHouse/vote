@@ -28,7 +28,7 @@ services:
       - "MONGO_INITDB_ROOT_USERNAME=vote"
       - "MONGO_INITDB_ROOT_PASSWORD=c1f66aac6b4fafbef3c659371b8a50ed"
     ports:
-      - "127.0.0.1:27017:27017"
+      - "27017:27017"
     volumes:
       - type: volume
         source: mongodb

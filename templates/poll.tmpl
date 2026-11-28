@@ -6,24 +6,28 @@
       <h4>{{ .Description | MakeLinks }}</h4>
       {{ end }}
       {{ if eq .PollType "ranked" }}
-      <p>This is a Ranked Choice vote. Rank the candidates in order of your preference. 1 is most preferred, and {{ .RankedMax }} is least preferred. You may leave an option blank
-      if you do not prefer it at all.</p>
+      <p>This is a Ranked Choice vote. Rank the candidates in order of your preference.
+      1 is most preferred, and {{ .RankedMax }} is least preferred.
+      You must rank in increasing order from 1, you cannot skip numbers.
+      You may leave an option blank if you do not prefer it at all (you have "No Confidence" in the option(s)).
+      If you like none of the options, you can submit the ballot without ranking any option.
+      Do not write in a "No Confidence" or "I like none of the candidates" in that case.</p>
       {{ end }}
 
       <br />
       <br />
 
-      <form action="/poll/{{ .Id }}" method="POST">
+      <form action="/poll/{{ .Id }}" class="mx-4" method="POST">
       {{ if eq .PollType "simple" }}
         {{ range $i, $option := .Options }}
-        <div class="form-check fs-4 lh-sm">
+        <div class="form-check fs-5 lh-sm">
           <input class="form-check-input" type="radio" name="option" id="{{ $option }}" value="{{ $option }}" />
           <label class="form-check-label" for="{{ $option }}">{{ $option }}</label>
         </div>
         <br />
         {{ end }}
         {{ if .AllowWriteIns }}
-        <div class="form-check fs-4 lh-sm">
+        <div class="form-check fs-5 lh-sm">
           <input class="form-check-input" type="radio" name="option" value="writein" />
           <input
             type="text"
@@ -38,7 +42,7 @@
       {{ if eq .PollType "ranked" }}
         {{ $rankedMax := .RankedMax }}
         {{ range $i, $option := .Options }}
-        <div class="form-check d-inline-flex align-items-center my-2">
+        <div class="d-inline-flex align-items-center my-2">
           <div>
             <input
               type="number"
@@ -50,7 +54,7 @@
               style="min-width: 70px"
             />
           </div>
-          <div class="mx-4">
+          <div class="mx-4 fs-5">
             <label class="form-check-label" for="{{ $option }}">{{ $option }}</label>
           </div>
         </div>
@@ -81,7 +85,13 @@
         {{ end }}
       {{ end }}
         <br />
-        <button type="submit" class="btn btn-primary my-4 mx-4">Submit</button>
+        <br />
+        <button type="submit" class="btn btn-danger mt-4" name="abstain" value="true">Abstain</button>
+        <div class="col-6 mt-2">
+        <span><strong>Note</strong>: Pressing Abstain will submit this page. Abstain will add you to quorum but will empty your ballot options and you will not actually vote for anyone or count as a Vote Cast.</span>
+        </div>
+        <br />
+        <button type="submit" class="btn btn-primary my-4">Submit Ballot</button>
       </form>
       {{ if and (.CanModify) (not .Gatekeep) }}
         <form action="/poll/{{ .Id }}/close" method="POST">
@@ -91,4 +101,3 @@
     </div>
   </body>
 </html>
-

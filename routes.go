@@ -184,20 +184,17 @@ func CreatePoll(c *gin.Context) {
 
 	switch c.PostForm("options") {
 	case "pass-fail-conditional":
-		poll.Options = []string{"Pass", "Fail/Conditional", "Abstain"}
+		poll.Options = []string{"Pass", "Fail/Conditional"}
 	case "fail-conditional":
-		poll.Options = []string{"Fail", "Conditional", "Abstain"}
+		poll.Options = []string{"Fail", "Conditional"}
 	case "custom":
 		poll.Options = []string{}
 		for opt := range strings.SplitSeq(c.PostForm("customOptions"), ",") {
 			poll.Options = append(poll.Options, strings.TrimSpace(opt))
-			if !slices.Contains(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
-				poll.Options = append(poll.Options, "Abstain")
-			}
 		}
 	case "pass-fail":
 	default:
-		poll.Options = []string{"Pass", "Fail", "Abstain"}
+		poll.Options = []string{"Pass", "Fail"}
 	}
 	if poll.Gatekeep {
 		if !IsEboard(user) {
@@ -340,11 +337,12 @@ func VoteInPoll(c *gin.Context) {
 		return
 	}
 
-	if poll.VoteType == database.POLL_TYPE_SIMPLE {
+	switch poll.VoteType {
+	case database.POLL_TYPE_SIMPLE:
 		processSimpleVote(c, poll, pId, user)
-	} else if poll.VoteType == database.POLL_TYPE_RANKED {
+	case database.POLL_TYPE_RANKED:
 		processRankedVote(c, poll, pId, user)
-	} else {
+	default:
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Unknown Poll Type"})
 		return
 	}
@@ -462,7 +460,12 @@ func processSimpleVote(c *gin.Context, poll *database.Poll, pId primitive.Object
 		UserId: user.Username,
 	}
 
-	if hasOption(poll, c.PostForm("option")) {
+	if c.PostForm("abstain") != "" {
+		database.CastAbstain(c, &voter)
+		return
+	}
+
+	if slices.Contains(poll.Options, c.PostForm("option")) {
 		vote.Option = c.PostForm("option")
 	} else if poll.AllowWriteIns && c.PostForm("option") == "writein" {
 		vote.Option = c.PostForm("writeinOption")
@@ -483,6 +486,11 @@ func processRankedVote(c *gin.Context, poll *database.Poll, pId primitive.Object
 	voter := database.Voter{
 		PollId: pId,
 		UserId: user.Username,
+	}
+
+	if c.PostForm("abstain") != "" {
+		database.CastAbstain(c, &voter)
+		return
 	}
 
 	// Populate vote
@@ -607,15 +615,6 @@ func uniquePolls(polls []*database.Poll) []*database.Poll {
 func containsPoll(polls []*database.Poll, poll *database.Poll) bool {
 	for _, p := range polls {
 		if p.Id == poll.Id {
-			return true
-		}
-	}
-	return false
-}
-
-func hasOption(poll *database.Poll, option string) bool {
-	for _, opt := range poll.Options {
-		if opt == option {
 			return true
 		}
 	}
