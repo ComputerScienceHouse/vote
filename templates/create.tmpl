@@ -14,7 +14,10 @@
             required
           >
         </div>
-        <div class="input-group my-3">
+        <div class="form-text mx-2">
+            The title should be short so people can quickly find it.
+        </div>
+        <div class="input-group mt-3">
           <label for="description" class="input-group-text">Description</label>
           <input
             type="text"
@@ -23,7 +26,10 @@
             placeholder="Description"
           >
         </div>
-        <div class="input-group my-3">
+        <div class="form-text mx-2">
+            The description can contain links and other relevant information.
+        </div>
+        <div class="input-group mt-3">
           <label for="options" class="input-group-text required-label">Options</label>
           <select name="options" id="options" onChange="onOptionsChange()" class="form-select">
             <option value="pass_fail" selected>Pass/Fail</option>
@@ -34,7 +40,7 @@
             <option value="custom">Custom</option>
           </select>
         </div>
-        <div id="customOptions" class="input-group d-none my-3">
+        <div class="customOptions input-group d-none mt-3">
           <label for="customOptions" class="input-group-text">Custom Vote Options</label>
           <input
             type="text"
@@ -42,6 +48,9 @@
             class="form-control"
             placeholder="Enter a comma separated list of custom vote options"
           >
+        </div>
+        <div class="customOptions container form-text d-none">
+            The custom options only needs to contain the options that should be on the ballot. Abstain, No Confidence, and the like shouldn't be added.
         </div>
 
         <h5 class="mt-4"><strong>Additional Settings</strong></h5>
@@ -73,7 +82,7 @@
           >
           <label for="hidden" class="form-check-label">Hide Results Until Vote is Complete</label>
         </div>
-        
+
         {{ if .EBoard }}
         <div id="eboard-options" class="my-4">
           <h5><strong>E-Board Options</strong></h5>
@@ -135,9 +144,9 @@
     <script>
       function onOptionsChange() {
         if (document.getElementById("options").value == "custom") {
-          document.getElementById("customOptions").classList.remove('d-none');
+          document.querySelectorAll(".customOptions").forEach(item => {item.classList.remove('d-none')})
         } else {
-          document.getElementById("customOptions").classList.add('d-none');
+          document.querySelectorAll(".customOptions").forEach(item => {item.classList.add('d-none')})
         }
       }
       function onGatekeepChange(){
