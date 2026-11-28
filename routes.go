@@ -184,20 +184,17 @@ func CreatePoll(c *gin.Context) {
 
 	switch c.PostForm("options") {
 	case "pass-fail-conditional":
-		poll.Options = []string{"Pass", "Fail/Conditional", "Abstain"}
+		poll.Options = []string{"Pass", "Fail/Conditional"}
 	case "fail-conditional":
-		poll.Options = []string{"Fail", "Conditional", "Abstain"}
+		poll.Options = []string{"Fail", "Conditional"}
 	case "custom":
 		poll.Options = []string{}
 		for opt := range strings.SplitSeq(c.PostForm("customOptions"), ",") {
 			poll.Options = append(poll.Options, strings.TrimSpace(opt))
-			if !slices.Contains(poll.Options, "Abstain") && (poll.VoteType == database.POLL_TYPE_SIMPLE) {
-				poll.Options = append(poll.Options, "Abstain")
-			}
 		}
 	case "pass-fail":
 	default:
-		poll.Options = []string{"Pass", "Fail", "Abstain"}
+		poll.Options = []string{"Pass", "Fail"}
 	}
 	if poll.Gatekeep {
 		if !IsEboard(user) {
